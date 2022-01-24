@@ -4,7 +4,7 @@ KEYWORDS = ['let', 'if', 'while', 'for', 'fun', 'return']
 INFIX_OPS = ['+', '-', '*', '**', '/', '\\', '%', '&&', '||', '^', '==', '>=', '<=', '!=']
 POSTFIX_OPS = ['++', '--']
 PREFIX_OPS = ['!']
-SYNTAX_CHARS = '(){}[],'
+SYNTAX_CHARS = '(){}[],;='
 
 
 class TokenTypes(Enum):
@@ -14,7 +14,15 @@ class TokenTypes(Enum):
     PREFIX_OP = auto()
     POSTFIX_OP = auto()
     LITERAL = auto()
-    SYNTAX = auto()
+    OPEN_PAREN = auto()
+    CLOSE_PAREN = auto()
+    OPEN_BRACKET = auto()
+    CLOSE_BRACKET = auto()
+    OPEN_BRACE = auto()
+    CLOSE_BRACE = auto()
+    COMMA = auto()
+    SEMICOLON = auto()
+    EQUALS = auto()
     ERROR = auto()
 
 
@@ -36,8 +44,24 @@ class Token:
             self.type = TokenTypes.LITERAL
         elif text.isalnum():
             self.type = TokenTypes.IDENTIFIER
-        elif text in SYNTAX_CHARS:
-            self.type = TokenTypes.SYNTAX
+        elif text == "(":
+            self.type = TokenTypes.OPEN_PAREN
+        elif text == ")":
+            self.type = TokenTypes.CLOSE_PAREN
+        elif text == "[":
+            self.type = TokenTypes.OPEN_BRACKET
+        elif text == "]":
+            self.type = TokenTypes.CLOSE_BRACKET
+        elif text == "{":
+            self.type = TokenTypes.OPEN_BRACE
+        elif text == "}":
+            self.type = TokenTypes.CLOSE_BRACE
+        elif text == ",":
+            self.type = TokenTypes.COMMA
+        elif text == ";":
+            self.type = TokenTypes.SEMICOLON
+        elif text == "=":
+            self.type = TokenTypes.EQUALS
         else:
             self.type = TokenTypes.ERROR
 
@@ -73,3 +97,5 @@ def tokenize(text, line):
                 token += c
         else:
             return [Token(token, line)] + tokenize(text[idx:], line)
+
+    return []
