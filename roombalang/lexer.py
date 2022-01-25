@@ -4,7 +4,8 @@ KEYWORDS = ['let', 'if', 'while', 'for', 'fun', 'return']
 INFIX_OPS = ['+', '-', '*', '**', '/', '\\', '%', '&&', '||', '^', '==', '>=', '<=', '!=']
 POSTFIX_OPS = ['++', '--']
 PREFIX_OPS = ['!']
-SYNTAX_CHARS = '(){}[],;='
+SPECIAL_CHARS = '!=<>?%^\\/+-&,;'
+PAIRED_CHARS = '(){}[]'
 
 
 class TokenTypes(Enum):
