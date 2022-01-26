@@ -1,10 +1,12 @@
 from enum import Enum, auto
 
 KEYWORDS = ['let', 'if', 'while', 'for', 'fun', 'return']
-INFIX_OPS = ['+', '-', '*', '**', '/', '\\', '%', '&&', '||', '^', '==', '>=', '<=', '!=']
+INFIX_OPS = ['+', '-', '*', '**', '/', '\\', '%', '&&', '||', '^', '==', '>=', '<=', '!=', "*=", "+=", "-=", "/=", "&=",
+             "|=", "^=", "%=", "\\="]
 POSTFIX_OPS = ['++', '--']
 PREFIX_OPS = ['!']
-SPECIAL_CHARS = '!=<>?%^\\/+-&,;'
+OPS = INFIX_OPS+POSTFIX_OPS+PREFIX_OPS
+SPECIAL_CHARS = '!=<>?%^\\*/+-&,;'
 PAIRED_CHARS = '(){}[]'
 
 
@@ -78,19 +80,32 @@ def tokenize(text, line):
     token = ''
     is_string = False
 
+    # the lexer has 7 rules:
+    # 1. if the first character of a token is whitespace, discard it
+    # 2. if the last 2 characters of a token are special characters then end the token
+    # 3. if one but not both of the last two characters of a token are special characters then end the token
+    # 4. if the next or last character of a token are special characters then end the token
+    # 5. if the next character of a token is a special character and the concatenation of the last and next are not an
+    #   op then end the token
+    # 6. if the next character of a token is whitespace then end the token
+    # 7. if there is no more text remaining then end the token
+
     for idx, c in enumerate(list(text)):
 
         if len(token) == 0 and c.isspace():
             continue
 
         if len(token) != 0:
-            if c in SPECIAL_CHARS and token[-1] in SPECIAL_CHARS:
+            if len(token) > 1 and token[-2] in SPECIAL_CHARS and token[-1] in SPECIAL_CHARS:
                 return accept()
 
-            if c in SPECIAL_CHARS != token[-1] in SPECIAL_CHARS:
+            if (c in SPECIAL_CHARS) != (token[-1] in SPECIAL_CHARS):
                 return accept()
 
             if c in PAIRED_CHARS or token[-1] in PAIRED_CHARS:
+                return accept()
+
+            if c in SPECIAL_CHARS and not (token[-1] + c) in OPS:
                 return accept()
 
             if c.isspace():
@@ -98,4 +113,4 @@ def tokenize(text, line):
 
         token += c
 
-    return []
+    return [Token(token, line)]
