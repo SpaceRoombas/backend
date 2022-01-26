@@ -68,35 +68,34 @@ class Token:
 
 
 def tokenize(text, line):
+
+    def accept(offset=0):
+        return [Token(token, line)] + tokenize(text[idx+offset:], line)
+
     if len(text) == 0:
         return []
 
     token = ''
     is_string = False
+
     for idx, c in enumerate(list(text)):
 
         if len(token) == 0 and c.isspace():
             continue
 
-        if len(token) == 0 and (c == '\"' or c == '\''):
-            is_string = True
-            token += c
-        elif is_string:
-            if (c == '\"' or c == '\'') and token[-1] != '\\':
-                token += c
-                return [Token(token, line)] + tokenize(text[idx + 1:], line)
-            else:
-                token += c
-        elif len(token) == 0 or (token[-1].isalnum() == c.isalnum() and token[-1].isspace() == c.isspace()):
-            if c in SYNTAX_CHARS:
-                if len(token) == 0:
-                    token += c
-                    return [Token(token, line)] + tokenize(text[idx + 1:], line)
-                else:
-                    return [Token(token, line)] + tokenize(text[idx:], line)
-            else:
-                token += c
-        else:
-            return [Token(token, line)] + tokenize(text[idx:], line)
+        if len(token) != 0:
+            if c in SPECIAL_CHARS and token[-1] in SPECIAL_CHARS:
+                return accept()
+
+            if c in SPECIAL_CHARS != token[-1] in SPECIAL_CHARS:
+                return accept()
+
+            if c in PAIRED_CHARS or token[-1] in PAIRED_CHARS:
+                return accept()
+
+            if c.isspace():
+                return accept()
+
+        token += c
 
     return []
