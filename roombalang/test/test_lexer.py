@@ -61,3 +61,65 @@ def test_math():
     assert tokens[14].type == TokenTypes.LITERAL
     assert tokens[14].text == "6"
 
+def test_more_complicated_function():
+    tokens = tokenize("fun nice(){for(let i=7;i<=2;i--){print(\"69fourtwenty\")return 420}}", 7)
+    assert tokens[-1].type == TokenTypes.CLOSE_BRACE
+    assert tokens.pop().text == "}"
+    assert tokens[-1].type == TokenTypes.CLOSE_BRACE
+    assert tokens.pop().text == "}"
+    assert tokens[-1].type == TokenTypes.LITERAL
+    assert tokens.pop().text == "420"
+    assert tokens[-1].type == TokenTypes.KEYWORD
+    assert tokens.pop().text == "return"
+    assert tokens[-1].type == TokenTypes.CLOSE_PAREN
+    assert tokens.pop().text == ")"
+    assert tokens[-1].type == TokenTypes.LITERAL
+    assert tokens.pop().text == "\"69fourtwenty\""
+    assert tokens[-1].type == TokenTypes.OPEN_PAREN
+    assert tokens.pop().text == "("
+    assert tokens[-1].type == TokenTypes.IDENTIFIER
+    assert tokens.pop().text == "print"
+    assert tokens[-1].type == TokenTypes.OPEN_BRACE
+    assert tokens.pop().text == "{"
+    assert tokens[-1].type == TokenTypes.CLOSE_PAREN
+    assert tokens.pop().text == ")"
+    assert tokens[-1].type == TokenTypes.POSTFIX_OP
+    assert tokens.pop().text == "--"
+    assert tokens[-1].type == TokenTypes.IDENTIFIER
+    assert tokens.pop().text == "i"
+    assert tokens[-1].type == TokenTypes.SEMICOLON
+    assert tokens.pop().text == ";"
+    assert tokens[-1].type == TokenTypes.LITERAL
+    assert tokens.pop().text == "2"
+    assert tokens[-1].type == TokenTypes.INFIX_OP
+    assert tokens.pop().text == "<="
+    assert tokens[-1].type == TokenTypes.IDENTIFIER
+    assert tokens.pop().text == "i"
+    assert tokens[-1].type == TokenTypes.SEMICOLON
+    assert tokens.pop().text == ";"
+    assert tokens[-1].type == TokenTypes.LITERAL
+    assert tokens.pop().text == "7"
+    assert tokens[-1].type == TokenTypes.EQUALS
+    assert tokens.pop().text == "="
+    assert tokens[-1].type == TokenTypes.IDENTIFIER
+    assert tokens.pop().text == "i"
+    assert tokens[-1].type == TokenTypes.KEYWORD
+    assert tokens.pop().text == "let"
+    assert tokens[-1].type == TokenTypes.OPEN_PAREN
+    assert tokens.pop().text == "("
+    assert tokens[-1].type == TokenTypes.KEYWORD
+    assert tokens.pop().text == "for"
+    assert tokens[-1].type == TokenTypes.OPEN_BRACE
+    assert tokens.pop().text == "{"
+    assert tokens[-1].type == TokenTypes.CLOSE_PAREN
+    assert tokens.pop().text == ")"
+    assert tokens[-1].type == TokenTypes.OPEN_PAREN
+    assert tokens.pop().text == "("
+    assert tokens[-1].type == TokenTypes.IDENTIFIER
+    assert tokens.pop().text == "nice"
+    assert tokens[-1].type == TokenTypes.KEYWORD
+    assert tokens.pop().text == "fun"
+
+
+
+
