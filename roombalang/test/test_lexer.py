@@ -26,7 +26,9 @@ def test_function_declaration():
     assert tokens[9].text == "6"
     assert tokens[10].type == TokenTypes.CLOSE_BRACE
     assert tokens[10].text == "}"
-    assert tokens[10].line == 42
+    assert tokens[11].type == TokenTypes.EOF
+    assert tokens[11].text == "EOF"
+    assert tokens[11].line == 42
 
 def test_math():
     tokens = tokenize("(2+!a+b++-7)/42*6", 12)
@@ -60,9 +62,13 @@ def test_math():
     assert tokens[13].text == "*"
     assert tokens[14].type == TokenTypes.LITERAL
     assert tokens[14].text == "6"
+    assert tokens[15].type == TokenTypes.EOF
+    assert tokens[15].text == "EOF"
 
 def test_more_complicated_function():
     tokens = tokenize("fun nice(){for(let i=7;i<=2;i--){print(\"69fourtwenty\")return 420}}", 7)
+    assert tokens[-1].type == TokenTypes.EOF
+    assert tokens.pop().text == "EOF"
     assert tokens[-1].type == TokenTypes.CLOSE_BRACE
     assert tokens.pop().text == "}"
     assert tokens[-1].type == TokenTypes.CLOSE_BRACE
@@ -119,7 +125,3 @@ def test_more_complicated_function():
     assert tokens.pop().text == "nice"
     assert tokens[-1].type == TokenTypes.KEYWORD
     assert tokens.pop().text == "fun"
-
-
-
-

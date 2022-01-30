@@ -26,6 +26,7 @@ class TokenTypes(Enum):
     COMMA = auto()
     SEMICOLON = auto()
     EQUALS = auto()
+    EOF = auto()
     ERROR = auto()
 
 
@@ -45,6 +46,8 @@ class Token:
         elif ((text[0] == "\"" or text[0] == "\'") and (text[-1] == "\"" or text[-1] == "\'")) \
                 or text.replace('.', '', 1).isdigit():
             self.type = TokenTypes.LITERAL
+        elif text == "EOF":
+            self.type = TokenTypes.EOF
         elif text.isalnum():
             self.type = TokenTypes.IDENTIFIER
         elif text == "(":
@@ -75,7 +78,7 @@ def tokenize(text, line):
         return [Token(token, line)] + tokenize(text[idx+offset:], line)
 
     if len(text) == 0:
-        return []
+        return [Token("EOF", line)]
 
     token = ''
     is_string = False
@@ -113,4 +116,4 @@ def tokenize(text, line):
 
         token += c
 
-    return [Token(token, line)]
+    return [Token(token, line), Token("EOF", line)]
