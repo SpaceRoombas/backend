@@ -186,14 +186,14 @@ def _parse_for(tokens):
 
     temp = tokens.pop(0)
     if temp.type == TokenTypes.OPEN_BRACE:
-        root.children += _parse_statements(tokens)
+        root.children.append(_parse_statements(tokens))
 
         temp = tokens.pop(0)
         if temp.type != TokenTypes.CLOSE_BRACE:
             _error(temp)
 
     else:
-        root.children += _parse_statement(tokens)
+        root.children.append(_parse_statement(tokens))
 
     return root
 
@@ -201,4 +201,21 @@ def _parse_expression(tokens):
 
 
 def _parse_declaration(tokens):
+    temp = tokens.pop(0)
+    if temp.type == TokenTypes.KEYWORD:
+        if temp.text == "fun":
+
+
+        elif temp.text != "let":
+            _error(temp)
+
+    else:
+        if temp.type != TokenTypes.IDENTIFIER:
+            _error(temp)
+
+        root
+
+        temp = tokens.pop(0)
+        if temp.type != TokenTypes.EQUALS:
+            _error(temp)
 
