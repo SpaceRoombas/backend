@@ -198,24 +198,87 @@ def _parse_for(tokens):
     return root
 
 def _parse_expression(tokens):
+    temp = tokens.pop(0)
+
+    if temp.type == TokenTypes.OPEN_BRACKET:
+
+        root = Node(temp)
+        lastcomma = True
+        while temp.type != TokenTypes.CLOSE_BRACKET:
+
+            if temp.type == TokenTypes.COMMA and not lastcomma:
+                lastcomma = True
+
+            elif lastcomma:
+                lastcomma = False
+                root.children.append(_parse_expression(tokens))
+
+            else:
+                _error(temp)
+
+            temp = tokens.pop(0)
+
+    elif temp.type == TokenTypes.PREFIX_OP or temp.type == TokenTypes.OPEN_PAREN\
+            or temp.type == TokenTypes.IDENTIFIER or temp.type == TokenTypes.LITERAL:
+
+        # locate end of expression
+        # search for operators from exponentiation to subtraction
+
+    else:
+        _error(temp)
 
 
 def _parse_declaration(tokens):
     temp = tokens.pop(0)
+    root = None
+
     if temp.type == TokenTypes.KEYWORD:
-        if temp.text == "fun":
-
-
-        elif temp.text != "let":
+        if temp.text != "let" and temp.text != "fun":
             _error(temp)
+
+        root = Node(temp)
+        temp = tokens.pop(0)
 
     else:
-        if temp.type != TokenTypes.IDENTIFIER:
-            _error(temp)
+        root = Node(Token(TokenTypes.KEYWORD, "let"))
 
-        root
+    if temp.type != TokenTypes.IDENTIFIER:
+        _error(temp)
+
+    root.children.append(temp)
+
+    temp = tokens.pop(0)
+    if temp.type == TokenTypes.EQUALS:
+        temp = tokens.pop(0)
+        root.children.append(_parse_expression(tokens))
+        return root
+
+    elif temp.type == TokenTypes.OPEN_PAREN:
+
+        root.children.append(temp)
+        lastcomma = True
+        while temp.type != TokenTypes.CLOSE_PAREN:
+
+            if temp.type == TokenTypes.COMMA and not lastcomma:
+                lastcomma = True
+            elif temp.type == TokenTypes.IDENTIFIER and lastcomma:
+                root.children.append(temp)
+                lastcomma = False
+            else:
+                _error(temp)
+
+            temp = tokens.pop(0)
+
+        root.children.append(temp)
 
         temp = tokens.pop(0)
-        if temp.type != TokenTypes.EQUALS:
-            _error(temp)
+        if temp.type == TokenTypes.OPEN_BRACE:
+            temp = tokens.pop(0)
+
+        root.children += _parse_statements(tokens)
+
+        return root
+
+    else:
+        _error(temp)
 
