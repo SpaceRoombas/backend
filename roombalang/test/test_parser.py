@@ -20,10 +20,12 @@ def test_more_complicated_function():
     tree = parse_file(tokens)
     print(tree)
 
+
 def test_if():
     tokens = tokenize("if(a==b){print(\"woo stuff\")}", 7)
     tree = parse_file(tokens)
     print(tree)
+
 
 def test_while():
     tokens = tokenize("while(taco--){move(LEFT)}", 7)
