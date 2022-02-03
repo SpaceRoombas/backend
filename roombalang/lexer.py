@@ -1,8 +1,9 @@
 from enum import Enum, auto
 
 KEYWORDS = ['let', 'if', 'while', 'for', 'fun', 'return']
-INFIX_OPS = ['+', '-', '*', '**', '/', '\\', '%', '&&', '||', '^', '==', '>=', '<=', '!=', "*=", "+=", "-=", "/=", "&=",
-             "|=", "^=", "%=", "\\="]
+# infix ops are ordered for precedence, do not change to be otherwise
+INFIX_OPS = ['**', '*', '/', '\\', '%', '+', '-', '&&', '||', '^', '==', '<', '>' '>=', '<=', '!=', "*=",
+             "/=", "\\=", "%=", "+=", "-=", "&=", "|=", "^="]
 POSTFIX_OPS = ['++', '--']
 PREFIX_OPS = ['!']
 OPS = INFIX_OPS+POSTFIX_OPS+PREFIX_OPS
@@ -90,7 +91,7 @@ def tokenize(text, line):
     # 4. if the next or last character of a token are special characters then end the token
     # 5. if the next character of a token is a special character and the concatenation of the last and next are not an
     #   op then end the token
-    # 6. if the next character of a token is whitespace then end the token
+    # 6. if the next character of a token is whitespace and the first character was not a quote then end the token
     # 7. if there is no more text remaining then end the token
 
     for idx, c in enumerate(list(text)):
@@ -111,7 +112,7 @@ def tokenize(text, line):
             if c in SPECIAL_CHARS and not (token[-1] + c) in OPS:
                 return accept()
 
-            if c.isspace():
+            if c.isspace() and token[0] not in ['"', '\'']:
                 return accept()
 
         token += c
