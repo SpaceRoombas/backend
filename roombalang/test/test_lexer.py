@@ -1,7 +1,6 @@
 import pytest
 from roombalang.lexer import tokenize, TokenTypes
 
-
 def test_function_declaration():
     tokens = tokenize("fun taco(a, b){return 6}", 42)
     assert tokens[0].type == TokenTypes.KEYWORD
@@ -30,6 +29,7 @@ def test_function_declaration():
     assert tokens[11].text == "EOF"
     assert tokens[11].line == 42
 
+    
 def test_math():
     tokens = tokenize("(2+!a+b++-7)/42*6", 12)
     assert tokens[0].type == TokenTypes.OPEN_PAREN
@@ -65,6 +65,7 @@ def test_math():
     assert tokens[15].type == TokenTypes.EOF
     assert tokens[15].text == "EOF"
 
+    
 def test_more_complicated_function():
     tokens = tokenize("fun nice(){for(let i=7;i<=2;i--){print(\"69fourtwenty\")return 420}}", 7)
     assert tokens[-1].type == TokenTypes.EOF

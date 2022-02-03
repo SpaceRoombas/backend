@@ -28,7 +28,6 @@ class TokenTypes(Enum):
     SEMICOLON = auto()
     EQUALS = auto()
     EOF = auto()
-    ERROR = auto()
 
 
 class Token:
@@ -111,7 +110,7 @@ def tokenize(text, line):
 
             if c in SPECIAL_CHARS and not (token[-1] + c) in OPS:
                 return accept()
-
+              
             if c.isspace() and token[0] not in ['"', '\'']:
                 return accept()
 
