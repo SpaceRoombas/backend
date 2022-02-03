@@ -1,8 +1,9 @@
 from enum import Enum, auto
 
 KEYWORDS = ['let', 'if', 'while', 'for', 'fun', 'return']
-INFIX_OPS = ['+', '-', '*', '**', '/', '\\', '%', '&&', '||', '^', '==', '>=', '<=', '!=', "*=", "+=", "-=", "/=", "&=",
-             "|=", "^=", "%=", "\\="]
+# infix ops are ordered for precedence, do not change to be otherwise
+INFIX_OPS = ['**', '*', '/', '\\', '%', '+', '-', '&&', '||', '^', '==', '<', '>' '>=', '<=', '!=', "*=",
+             "/=", "\\=", "%=", "+=", "-=", "&=", "|=", "^="]
 POSTFIX_OPS = ['++', '--']
 PREFIX_OPS = ['!']
 OPS = INFIX_OPS+POSTFIX_OPS+PREFIX_OPS
@@ -26,7 +27,7 @@ class TokenTypes(Enum):
     COMMA = auto()
     SEMICOLON = auto()
     EQUALS = auto()
-    ERROR = auto()
+    EOF = auto()
 
 
 class Token:
@@ -45,6 +46,8 @@ class Token:
         elif ((text[0] == "\"" or text[0] == "\'") and (text[-1] == "\"" or text[-1] == "\'")) \
                 or text.replace('.', '', 1).isdigit():
             self.type = TokenTypes.LITERAL
+        elif text == "EOF":
+            self.type = TokenTypes.EOF
         elif text.isalnum():
             self.type = TokenTypes.IDENTIFIER
         elif text == "(":
@@ -75,7 +78,7 @@ def tokenize(text, line):
         return [Token(token, line)] + tokenize(text[idx+offset:], line)
 
     if len(text) == 0:
-        return []
+        return [Token("EOF", line)]
 
     token = ''
     is_string = False
@@ -87,7 +90,7 @@ def tokenize(text, line):
     # 4. if the next or last character of a token are special characters then end the token
     # 5. if the next character of a token is a special character and the concatenation of the last and next are not an
     #   op then end the token
-    # 6. if the next character of a token is whitespace then end the token
+    # 6. if the next character of a token is whitespace and the first character was not a quote then end the token
     # 7. if there is no more text remaining then end the token
 
     for idx, c in enumerate(list(text)):
@@ -107,10 +110,10 @@ def tokenize(text, line):
 
             if c in SPECIAL_CHARS and not (token[-1] + c) in OPS:
                 return accept()
-
-            if c.isspace():
+              
+            if c.isspace() and token[0] not in ['"', '\'']:
                 return accept()
 
         token += c
 
-    return [Token(token, line)]
+    return [Token(token, line), Token("EOF", line)]
