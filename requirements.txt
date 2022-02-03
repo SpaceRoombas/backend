@@ -1,1 +1,3 @@
 pytest
+twisted
+flatbuffers == 2.0
