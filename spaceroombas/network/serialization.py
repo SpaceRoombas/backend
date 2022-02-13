@@ -11,12 +11,15 @@ message_types = {
     "ACK": message_type.message_type().ACK
 }
 
+
 # Various mappers
 class MessageMapper:
     def mapBuffer(self, buffer):
         raise NotImplementedError
+
     def mapMessage(self, message):
         raise NotImplementedError
+
 
 class CarrierMapper(MessageMapper):
     def unpack_carrier_payload(self, carrier):
@@ -39,6 +42,7 @@ class CarrierMapper(MessageMapper):
 
         return messages.CarrierPigeon(message_type, hint, carrier_payload)
 
+
 class HandshakeMapper(MessageMapper):
     def mapBuffer(self, buffer):
         handshake = session_handshake.session_handshake.GetRootAs(buffer, 0)
@@ -48,11 +52,13 @@ class HandshakeMapper(MessageMapper):
             handshake.CreationTime()
         )
 
+
 # Mapper lookup table
 mappers = {
     "carrier_pigeon": CarrierMapper(),
     "handshake": HandshakeMapper()
 }
+
 
 def _safe_fetch_mapper(mapper_hint):
     mapper = None
@@ -60,15 +66,18 @@ def _safe_fetch_mapper(mapper_hint):
         mapper = mappers[mapper_hint]
     except KeyError:
         print("Can't map type `%s` because a mapper doesn't exist" % (mapper_hint))
-        raise RuntimeError # TODO gracefully handle this by returning an error type
+        raise RuntimeError  # TODO gracefully handle this by returning an error type
     return mapper
+
 
 def _carrier_has_payload(carrier):
     return carrier.payload is not None
 
+
 def _deserialize_carrier_payload(carrier):
     mapper = _safe_fetch_mapper(carrier.hint)
     carrier.payload = mapper.mapBuffer(carrier.payload)
+
 
 def deserialize_carrier(carrier_bytes):
     mapper = _safe_fetch_mapper("carrier_pigeon")
@@ -80,11 +89,11 @@ def deserialize_carrier(carrier_bytes):
     return carrier
 
 
-# # # #  # # #  # # #  # # #  # # # 
+# # # #  # # #  # # #  # # #  # # 
 #           UTILITY
- # # #  # # #  # # #  # # #  # # # 
+# # #  # # #  # # #  # # #  # # # 
 
-def create_carrier_pigeon(message_hint, payload, type = message_types["Message"]):
+def create_carrier_pigeon(message_hint, payload, type=message_types["Message"]):
 
     # Delegate object packing from somewhere?
     builder = flatbuffers.Builder(2048)
@@ -92,7 +101,6 @@ def create_carrier_pigeon(message_hint, payload, type = message_types["Message"]
     # Serialize non-scalars
     # Message Hint
     hint_scalar = builder.CreateString(message_hint)
-
 
     # Serialize scalars
     carrier_pigeon.Start(builder)

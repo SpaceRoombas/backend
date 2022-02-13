@@ -44,7 +44,8 @@ class SessionHandler(protocol.Protocol):
     def send_data(self, buffer):
         # The client likes two buffers sent: data size => data
         bufferSz = len(buffer)
-        bufferSzBytes = bufferSz.to_bytes(4, byteorder="big") # Always send big endian
+        # Always send big endian
+        bufferSzBytes = bufferSz.to_bytes(4, byteorder="big")
 
         # Send it
         self.transport.write(bufferSzBytes)
@@ -80,6 +81,7 @@ class SessionHandler(protocol.Protocol):
     def send_message(self, message):
         pass # Message handing handled here
 
+
 class SessionHandlerFactory(protocol.Factory):
 
     session_clients = dict()
@@ -88,12 +90,13 @@ class SessionHandlerFactory(protocol.Factory):
         super().__init__()
 
     def add_session(self, session_structure):
-        if session_structure.id is None: # cheap null-check
+        if session_structure.id is None:  # cheap null-check
             return
         self.session_clients[session_structure.id] = session_structure
 
-    def buildProtocol(self, addr: IAddress) -> "Optional[Protocol]":
+    def buildProtocol(self, addr: IAddress):
         return SessionHandler(self)
+
 
 class ServerGateway():
 
@@ -111,14 +114,14 @@ class ServerGateway():
 
             for msg in queue:
                 handler.send_message(msg)
-    
+ 
     def messages(self):
         messages = list()
 
         if self.factory is not None:
             for k, v in self.factory.session_clients.items():
                 queue = v.recieve_queue
-                messages.append(queue.get()) # Head of each queue is inserted into messages list
+                messages.append(queue.get())  # Head of each queue is inserted into messages list
 
         return messages
 
@@ -133,3 +136,4 @@ class ServerGateway():
 
         send_looper.start(0.5)
         reactor.run()
+
