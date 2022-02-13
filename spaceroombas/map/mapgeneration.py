@@ -1,9 +1,3 @@
-"""
-Created on Fri Feb 11 11:53:52 2022
-
-@author: AndersenB
-"""
-
 import random
 
 def Make_World(x_range,y_range,rand):
@@ -53,12 +47,3 @@ def Run_Simulation(x,y,rand,stay,birth,steps,sides = False):
 
 def generate():
     return Run_Simulation(50,50,.4,4,6,5) #2gold clusters 
-
-#Run_Simulation(50,50,.03,1,4,10,False) #1gold clusters like in aoe2
-#Run_Simulation(50,50,.4,4,6,5) #2gold clusters 
-#Run_Simulation(50,50,.3,3,4,4) #1dense mountains or forest
-#Run_Simulation(50,50,.4,4,4,5) #2dense mountains or forest
-#Run_Simulation(50,50,.5,4,5,8) #3dense mountains or forest
-#Run_Simulation(400,400,.5,4,5,20,True) #cave
-#Run_Simulation(50,50,.01,9,2,80) #fun
-#Run_Simulation(50,50,.3,9,3,40) #fun
