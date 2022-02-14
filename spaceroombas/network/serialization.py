@@ -1,14 +1,14 @@
 from multiprocessing.sharedctypes import Value
-import flats.carrier_pigeon as carrier_pigeon
-import flats.message_type as message_type
-import flats.session_handshake as session_handshake
+from .flats import carrier_pigeon
+from .flats.message_type import message_type
+from .flats.session_handshake import session_handshake
 import flatbuffers
-import messages
+from . import messages
 
 # Maps to the backing flat
 message_types = {
-    "Message": message_type.message_type().Message,
-    "ACK": message_type.message_type().ACK
+    "Message": message_type().Message,
+    "ACK": message_type().ACK
 }
 
 
@@ -45,7 +45,7 @@ class CarrierMapper(MessageMapper):
 
 class HandshakeMapper(MessageMapper):
     def mapBuffer(self, buffer):
-        handshake = session_handshake.session_handshake.GetRootAs(buffer, 0)
+        handshake = session_handshake.GetRootAs(buffer, 0)
         return messages.Handshake(
             handshake.Username().decode('utf-8'),
             handshake.Signature().decode('utf-8'),

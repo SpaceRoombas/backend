@@ -1,12 +1,11 @@
-from asyncio import queues
+from queue import LifoQueue, Empty
 from twisted.internet.interfaces import IAddress
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.task import LoopingCall
-import serialization
-import flats.message_type as message_type
-import util
-from queue import LifoQueue
+from . import serialization
+from . import util
+from .flats.message_type import message_type
 
 class SessionClient():
     def __init__(self, id, handler) -> None:
@@ -15,6 +14,13 @@ class SessionClient():
         self.id = id # this may be the screen name, or a hash of the screen name
         self.username = id
         self.handler = handler
+    
+    def tick_send_message(self):
+        try:
+            msg = self.send_queue.get(False)
+        except Empty:
+            print("Send queue empty for %s" % (self.id))
+            return # send queue empty
 
 class SessionHandler(protocol.Protocol):
     def __init__(self, factory) -> None:
@@ -52,14 +58,20 @@ class SessionHandler(protocol.Protocol):
         self.transport.write(buffer)
 
     def handle_handshake(self, message):
+        handshake_ack = None
         # Check handshake signature
         self.__session_id = message.username
 
         # TODO Verify handshake signature
         # TODO Check if session object exists already (reconnect)
 
-        # Create session object
-        self.__factory.add_session(SessionClient(self.__session_id, self))
+        # Create session object or find existing
+        if self.__session_id not in self.__factory.session_clients.keys():
+            self.__factory.add_session(SessionClient(self.__session_id, self))
+        
+        handshake_ack = util.utility_create_message_handshakeACK()
+
+        self.send_data(handshake_ack)
 
     def dispatch_carrier_deserialize(self, carrier_bytes):
         carrier = serialization.deserialize_carrier(carrier_bytes)
@@ -68,7 +80,7 @@ class SessionHandler(protocol.Protocol):
         # Determine if message requies immediate service or 3-day shipping
         if util.is_immediate(carrier):
             # do stuff, return. For now, handle a handshake!
-            if carrier.type == message_type.message_type.Handshake:
+            if carrier.type == message_type.Handshake:
                 self.handle_handshake(carrier.payload)
             return # immediate messages are not enqueued
 
@@ -77,9 +89,6 @@ class SessionHandler(protocol.Protocol):
             self.session_queue().put(message)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
-
-    def send_message(self, message):
-        pass # Message handing handled here
 
 
 class SessionHandlerFactory(protocol.Factory):
@@ -104,32 +113,43 @@ class ServerGateway():
         self.factory = None
         pass
 
-    def handle_messages(self):
+    def __dispatch_client_messages(self):
         if self.factory is None:
             return
 
         for k, v in self.factory.session_clients.items():
-            handler = v.handler
-            queue = v.recieve_queue
+            v.tick_send_message()
 
-            for msg in queue:
-                handler.send_message(msg)
- 
-    def messages(self):
+
+    def slice_messages(self):
         messages = list()
 
         if self.factory is not None:
             for k, v in self.factory.session_clients.items():
                 queue = v.recieve_queue
-                messages.append(queue.get())  # Head of each queue is inserted into messages list
-
+                try:
+                    messages.append(queue.get(False))  # Head of each queue is inserted into messages list
+                except Empty:
+                    continue # Queue is empty, continue on silently
         return messages
+
+    def enque_message(self, clientid, message):
+        if self.factory is not None:
+            try:
+                client = self.factory.session_clients[clientid]
+                client.send_queue.put(message)
+            except KeyError:
+                print("Client does not exist")
+                return
+
+    def get_clients(self):
+        return self.factory.session_clients
 
     def start(self, port: int):
         server = TCP4ServerEndpoint(reactor, port)
         self.factory = SessionHandlerFactory()
 
-        send_looper = LoopingCall(self.handle_messages)
+        send_looper = LoopingCall(self.__dispatch_client_messages)
 
         print("Starting server on %d" % (port))
         server.listen(self.factory)

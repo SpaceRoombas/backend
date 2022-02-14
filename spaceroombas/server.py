@@ -2,6 +2,6 @@ import network.server_gateway
 
 gateway = network.server_gateway.ServerGateway()
 
+# Import guard
 if __name__ == "__main__":
-    print("Welcome to the SpaceRoombas server!")
-    gateway.start()
+    gateway.start(9001)
