@@ -1,11 +1,40 @@
+from distutils.log import error
 from queue import LifoQueue, Empty
 from twisted.internet.interfaces import IAddress
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.task import LoopingCall
-from . import serialization
-from . import util
-from .flats.message_type import message_type
+
+from data import serialization
+from data.flats.message_type import message_type
+
+from data.messages import CarrierPigeon, Handshake, MapUpdateRequestMessage
+
+immediates = [
+    message_type.ACK,
+    message_type.Handshake,
+]
+
+def utility_create_message_connectionACK():
+    return serialization.create_carrier_pigeon("connect", None, serialization.message_types["ACK"])
+
+def utility_create_message_recieveACK():
+    return serialization.create_carrier_pigeon("recieve", None, serialization.message_types["ACK"])
+
+def utility_create_message_handshakeACK():
+    return serialization.create_carrier_pigeon("handshake", None, serialization.message_types["ACK"])
+
+"""
+Checks if message requires immediate service
+"""
+def is_immediate(carrier):
+    return carrier.type in immediates
+
+class ClientMessageWrapper():
+
+    def __init__(self, clientid, message) -> None:
+        self.client = clientid
+        self.message = message
 
 class SessionClient():
     def __init__(self, id, handler) -> None:
@@ -18,8 +47,9 @@ class SessionClient():
     def tick_send_message(self):
         try:
             msg = self.send_queue.get(False)
+            self.handler.send_data("some_message".encode('utf-8'))
+            # TODO Serialize
         except Empty:
-            print("Send queue empty for %s" % (self.id))
             return # send queue empty
 
 class SessionHandler(protocol.Protocol):
@@ -52,7 +82,7 @@ class SessionHandler(protocol.Protocol):
         bufferSz = len(buffer)
         # Always send big endian
         bufferSzBytes = bufferSz.to_bytes(4, byteorder="big")
-
+        print("Sending it!...")
         # Send it
         self.transport.write(bufferSzBytes)
         self.transport.write(buffer)
@@ -68,8 +98,18 @@ class SessionHandler(protocol.Protocol):
         # Create session object or find existing
         if self.__session_id not in self.__factory.session_clients.keys():
             self.__factory.add_session(SessionClient(self.__session_id, self))
+        else:
+            # Re add self to handler object..
+            # TODO This MUST be refactored - we will probably see race conditions here
+            # But essentially, this case is for a reconnect, so we will probaby need smarter
+            # logic here
+            print("Reconnecting orphaned client")
+            self.__factory.session_clients[self.__session_id].handler = self
+
+        # Add request for initial map
+        self.session_queue().put(ClientMessageWrapper(self.__session_id, MapUpdateRequestMessage()), True, 0.5)
         
-        handshake_ack = util.utility_create_message_handshakeACK()
+        handshake_ack = utility_create_message_handshakeACK()
 
         self.send_data(handshake_ack)
 
@@ -78,7 +118,7 @@ class SessionHandler(protocol.Protocol):
         message = None
 
         # Determine if message requies immediate service or 3-day shipping
-        if util.is_immediate(carrier):
+        if is_immediate(carrier):
             # do stuff, return. For now, handle a handshake!
             if carrier.type == message_type.Handshake:
                 self.handle_handshake(carrier.payload)
@@ -86,7 +126,8 @@ class SessionHandler(protocol.Protocol):
 
         # Unpack message and enque
         try:
-            self.session_queue().put(message)
+            message_wrapper = ClientMessageWrapper(self.__session_id, message)
+            self.session_queue().put(message_wrapper, True, 0.5)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
 
@@ -107,10 +148,11 @@ class SessionHandlerFactory(protocol.Factory):
         return SessionHandler(self)
 
 
-class ServerGateway():
+class RoombaNetwork():
 
-    def __init__(self) -> None:
+    def __init__(self, port=9001) -> None:
         self.factory = None
+        self.__port = port
         pass
 
     def __dispatch_client_messages(self):
@@ -121,7 +163,7 @@ class ServerGateway():
             v.tick_send_message()
 
 
-    def slice_messages(self):
+    def fetch_messages(self):
         messages = list()
 
         if self.factory is not None:
@@ -135,25 +177,35 @@ class ServerGateway():
 
     def enque_message(self, clientid, message):
         if self.factory is not None:
-            try:
-                client = self.factory.session_clients[clientid]
-                client.send_queue.put(message)
-            except KeyError:
-                print("Client does not exist")
+            packed_message = serialization.magically_package_object(message)
+
+            if packed_message is None:
+                print("Object couldn't be packaged and something really bad happened")
                 return
+
+            if clientid == "*": # This message gets put into *ALL* clients
+                for k, v in self.factory.session_clients.items():
+                    v.send_queue.put(message, True, 0.5)
+            else:
+                try:
+                    client = self.factory.session_clients[clientid]
+                    client.send_queue.put(message, True, 0.5)
+                except KeyError:
+                    print("Client does not exist")
+                    return
 
     def get_clients(self):
         return self.factory.session_clients
 
-    def start(self, port: int):
-        server = TCP4ServerEndpoint(reactor, port)
+    def start(self):
+        server = TCP4ServerEndpoint(reactor, self.__port)
         self.factory = SessionHandlerFactory()
 
         send_looper = LoopingCall(self.__dispatch_client_messages)
 
-        print("Starting server on %d" % (port))
-        server.listen(self.factory)
-
+        print("Starting server on %d" % (self.__port))
+        
         send_looper.start(0.5)
+        server.listen(self.factory)
         reactor.run()
 
