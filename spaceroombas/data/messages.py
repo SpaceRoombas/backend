@@ -1,6 +1,3 @@
-from mimetypes import init
-
-
 class CarrierPigeon():
     def __init__(self, type=None, hint=None, payload=None):
         self.type = type
@@ -13,3 +10,9 @@ class Handshake():
         self.creation_time = creation_time
         self.username = username
         self.signature = signature
+
+class MapUpdateRequestMessage():
+
+    def __init__(self, chunk="all") -> None:
+        self.req_chunk = chunk
+        self.data = None
