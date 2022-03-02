@@ -1,3 +1,4 @@
 pytest
 twisted
 flatbuffers == 2.0
+flask
