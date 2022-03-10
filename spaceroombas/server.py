@@ -1,3 +1,4 @@
+import json
 from flask import Flask
 from flask import jsonify
 from flask import request
@@ -7,6 +8,7 @@ import jwt
 import datetime
 import os
 from functools import wraps
+from sqlalchemy.exc import IntegrityError
 
 
 app = Flask(__name__)
@@ -48,9 +50,8 @@ class UserModel():
     def hash(self, plaintext):
         if plaintext is None:
             return
-        m = sha256()
-        m.update(plaintext.encode('utf-8'))
-        return m.digest()
+        m = sha256(plaintext.encode('utf-8'))
+        return m.hexdigest()
 
 
 def _safe_fetch_json_credentials(json_req):
@@ -69,7 +70,7 @@ def _safe_fetch_json_credentials(json_req):
 
 @app.route("/")
 def hello_world():
-    return "<p>Hello, World!</p>"
+    return ""
 
 @app.route('/api/v1', methods=["GET"])
 def info_view():
@@ -100,9 +101,9 @@ def register_user():
     credentials = _safe_fetch_json_credentials(request.get_json())
    
     if len(credentials.username) > 15:
-        return("Username exceeds 15 characters")
+        return("Username exceeds 15 characters"), 400
     if len(credentials.password) > 20:
-        return("Password exceeds 20 characters")
+        return("Password exceeds 20 characters"), 400
     
     newUser =  UserDbInfo(username=credentials.username, password=credentials.hashed_password, email=credentials.email)
     
@@ -111,20 +112,25 @@ def register_user():
         if newUser is None:
             newUser =  UserDbInfo(username=credentials.username, password=credentials.hashed_password, email=credentials.email)
             db.session.add(newUser)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                return "Username already exists", 400
+            return jsonify({"status":"registered"})
         else:
-            return("User already exists")
-    return("Please insert a username and password")
+            return("User already exists"), 400
+    return("Please insert a username and password"), 400
     
 
 @app.route("/login", methods= ["POST"])
 def authenticate_route():
     credentials = _safe_fetch_json_credentials(request.get_json())
     
+    # TODO probably should return some sort of JSON error object here
     if credentials.username is None:
-        return("Please insert your username")
+        return("Please insert your username"), 400
     if credentials.password is None:
-        return("Please insert your password")
+        return("Please insert your password"), 400
     
     userLogin = UserDbInfo.query.filter_by(username=credentials.username).first()
 
@@ -137,9 +143,9 @@ def authenticate_route():
                 app.config['SECRET_KEY'])
             return jsonify({'token': token})
         else:
-            return("Login Information is Not Valid")
+            return("Login Information is Not Valid"), 403
     
-    return("Login Information is Not Valid")
+    return("Login Information is Not Valid"), 403
 
 @app.route("/auth", methods= ["GET"])
 @token_required
@@ -147,5 +153,9 @@ def authorized():
     return jsonify({
         "message":"User is authorized."
     })
+
+# Migrate database on server start
+db.create_all()
+db.session.commit()
 
 app.run("localhost", 9000)
