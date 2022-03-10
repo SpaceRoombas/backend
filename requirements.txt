@@ -1,3 +1,6 @@
 pytest
 twisted
 flatbuffers == 2.0
+flask
+flask_sqlalchemy
+pyjwt
