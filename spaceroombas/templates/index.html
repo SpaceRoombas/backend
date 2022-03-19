@@ -1,0 +1,27 @@
+<html>
+<head>
+<title>Password Reset</title>
+<link rel="stylesheet" href='/static/stylesheet.css' />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Changa">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Oswald">
+</head>
+<body>
+<div class='child titlebar'>
+    <p class='login'>LOGIN</p>
+</div>
+<form class='centered' method="POST" action="">
+    {{ form.hidden_tag() }}
+<div class='centered'>
+    <p>
+        {{form.password.label}}
+        {{form.password}}<br>
+    </p>
+    <p>
+        {{form.confirmPassword.label}}
+        {{form.confirmPassword}}<br>
+    </p>
+    <p>{{form.submit(class='button')}}</p>
+</div>
+</form>
+</body>
+</html>  

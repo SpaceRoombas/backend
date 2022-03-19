@@ -1,22 +1,43 @@
+#from crypt import methods
+from ast import Pass
 import json
-from flask import Flask
+from flask import Flask, flash
 from flask import jsonify
 from flask import request
+from flask import url_for
+from flask import render_template
 from flask_sqlalchemy import SQLAlchemy
 from hashlib import sha256
 import jwt
 import datetime
 import os
 from functools import wraps
+from sqlalchemy import true
 from sqlalchemy.exc import IntegrityError
-
+from flask_mail import Mail, Message
+from forms import PasswordResetForm
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///userInfo.db'
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = "programming.game.emails@gmail.com"
+app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS')
+mail = Mail(app)
+
 db = SQLAlchemy(app)
 
-def token_required(func):
+def sendForgotPassEmail(user,token):
+    msg = Message()
+    msg.subject = "Password Reset"
+    msg.recipients = [user.email]
+    msg.sender = app.config['MAIL_USERNAME']
+    msg.body = f'''Click the link below to reset your password:\n{url_for('showResetForm', token=token,_external=true)}\nLink expires after 10 minutes'''
+    mail.send(msg)
+
+def token_required(func): #May not be needed, depending on what else we use tokens for
     @wraps(func)
     def decorated(*args, **kwargs):
         token = request.args.get('token')
@@ -31,12 +52,26 @@ def token_required(func):
         return func(*args, **kwargs)
     return decorated
 
+def hash(plaintext):
+    if plaintext is None:
+        return
+    m = sha256(plaintext.encode('utf-8'))
+    return m.hexdigest()
+            
 # Various models
 class UserDbInfo(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     username = db.Column(db.String(15), nullable = False, unique = True)
     password = db.Column(db.String(64), nullable = False)
     email = db.Column(db.String(255), nullable = False, unique = True)
+    
+    def verifyToken(token):
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            userId = data.get('user')
+        except:
+            return None
+        return UserDbInfo.query.get(userId) #Get ID of user who submitted token, and return the user
     
     def __repr__(self):
         return '<User %r>' % self.username
@@ -137,8 +172,8 @@ def authenticate_route():
     if userLogin:
         if userLogin.password == credentials.hashed_password:
             token = jwt.encode({
-                'user':userLogin.username,
-                'exp' : datetime.datetime.utcnow() + datetime.timedelta(seconds=60)
+                'user':userLogin.id,
+                'exp' : datetime.datetime.utcnow() + datetime.timedelta(seconds=600)
             },
                 app.config['SECRET_KEY'])
             return jsonify({'token': token})
@@ -153,6 +188,36 @@ def authorized():
     return jsonify({
         "message":"User is authorized."
     })
+    
+@app.route("/forgotPass", methods = ["GET", "POST"]) #This method takes in the user email from Unity. Upon submit, user is sent email
+def forgotPassword():
+    credentials = _safe_fetch_json_credentials(request.get_json())
+    user = UserDbInfo.query.filter_by(email=credentials.email).first()
+    if user:
+        token = jwt.encode({
+                'user':user.id,
+                'exp' : datetime.datetime.utcnow() + datetime.timedelta(seconds=600)
+            },
+                app.config['SECRET_KEY'])
+        sendForgotPassEmail(user, token)
+        return("Password Reset sent")
+    else:
+        return("Email not found in the database"), 403
+
+
+@app.route("/resetPassForm/<token>", methods = ["GET", "POST"]) #This form will open once the user clicks the link in the sent email
+def showResetForm(token):
+    user = UserDbInfo.verifyToken(token) #Check to see if token is associated with the user
+    if user is None:
+        return("Invalid Token")
+    form = PasswordResetForm()
+    if form.validate_on_submit(): #Once user hits submit, change their password to what they input
+        hashedPass = hash(form.password.data) #Hash password before storing in database
+        user.password = hashedPass
+        db.session.commit()
+        return("Password was commited")
+    return render_template('index.html', form=form)    
+    
 
 # Migrate database on server start
 db.create_all()
