@@ -4,7 +4,10 @@ import copy
 class Stack:
     def __init__(self, parent=None, addr=None):
         self._parent = parent
-        self._vars = {}
+        if parent is None:
+            self._vars = {"true": [True], "false": [False], "pi": [3.14159265359]}
+        else:
+            self._vars = {}
         self.addr = addr
 
     def setVar(self, iden, val):
@@ -272,7 +275,8 @@ class VM:
                     break
 
             except Exception:
-                print("crash at ins: ", self.pointer)
+                print(f"crash at ins: {self.pointer}\n {bytecode[self.pointer]}")
+                print(bytecode)
                 raise Exception
 
         return self.pointer

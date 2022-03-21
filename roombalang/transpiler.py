@@ -124,6 +124,7 @@ class Transpiler:
                    self.transpile(tree.children[0]) + \
                    ['if', done] + \
                    self.transpile(tree.children[1]) + \
+                   ['goto', start] + \
                    ['lbl', done]
 
         elif token == "for":
