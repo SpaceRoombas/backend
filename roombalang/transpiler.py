@@ -104,17 +104,19 @@ class Transpiler:
                     'poidx']
 
         elif token == "if":
-            label = self._get_label()
+            else_lbl = self._get_label()
+            end_lbl = self._get_label()
 
             bytecode = self.transpile(tree.children[0]) + \
-                       ['if', label] + \
+                       ['if', else_lbl] + \
                        self.transpile(tree.children[1]) + \
-                       ['lbl', label]
+                       ['goto', end_lbl] + \
+                       ['lbl', else_lbl]
 
             if len(tree.children) == 3:
                 bytecode += self.transpile(tree.children[2])
 
-            return bytecode
+            return bytecode + ['lbl', end_lbl]
 
         elif token == "while":
             start = self._get_label()

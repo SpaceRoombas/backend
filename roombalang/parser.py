@@ -22,7 +22,7 @@ _stmt: dec
 return: "return" _exp
 block: "{" _stmt* "}"
 
-ctrl: "if" "(" _exp ")" _stmt                      -> if
+ctrl: "if" "(" _exp ")" _stmt ("else" _stmt)       -> if
       | "while" "(" _exp ")" _stmt                 -> while
       | "for" "(" dec ";" _exp ";" _stmt ")" _stmt -> for
 
