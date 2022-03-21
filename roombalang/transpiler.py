@@ -95,12 +95,12 @@ class Transpiler:
         elif token == "iden":
             return ['puv', str(tree.children[0]), 'get']
 
-        elif token == "lst_index":
-            var = str(tree.children[0].children[0].children[0])
-            idx = str(tree.children[0].children[1].children[0])
+        elif token == "list_index":
+            var = str(tree.children[0].children[0])
+            idx = str(tree.children[1].children[0])
 
             return ['puv', var,
-                    'puv', idx,
+                    'puv', int(idx),
                     'poidx']
 
         elif token == "if":
@@ -143,8 +143,10 @@ class Transpiler:
         elif token == "list":
             bytecode = []
 
-            for i in tree.children:
-                bytecode += self.transpile(i) + ['append']
+            bytecode += self.transpile(tree.children[0])
+
+            for i in tree.children[1:]:
+                bytecode += self.transpile(i) + ['aps']
 
             return bytecode
 
