@@ -1,6 +1,6 @@
-from roombalang.parser import Parser
-from transpiler import Transpiler
-from interpreter import Interpreter
+from .parser import Parser
+from .transpiler import Transpiler
+from .interpreter import Interpreter
 
 if __name__ == "__main__":
     parser = Parser()

@@ -1,4 +1,4 @@
-from vm import VM
+from .vm import VM
 
 
 class Interpreter:
