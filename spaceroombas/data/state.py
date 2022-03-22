@@ -9,7 +9,7 @@ class PlayerExistsError(ArgumentError):
 class MapSector():
     
     def __init__(self, sector_id) -> None:
-        self.land_map = mapgeneration.generate()
+        self.land_map = mapgeneration.generate()# TODO update map to hold more information... like walkable
         self.sector_id = sector_id
         self.sect_up = None
         self.sect_down = None
@@ -25,7 +25,7 @@ class EntityLocation():
         self.x = x
         self.y = y
     
-class PlayerRobot():
+class PlayerRobot(): 
     def __init__(self, owner_id, location: EntityLocation):
         self.owner = owner_id
         self.location = location
@@ -49,7 +49,7 @@ class GameState():
 
         playerState = PlayerState(player_id)
 
-        if player_id in self.players:
+        if player_id in self.players:## TODO implement logic here for orphan
             raise PlayerExistsError("Player already exists")
         self.players[player_id] = playerState
 
@@ -72,7 +72,10 @@ class MapState():
     def next_sector_id(self):
         return self.sector_count() + 1
 
-    def generate_map_sector(self):
+    def generate_map_sector(self): ## TODO incorporate logic for adding to current graph/ update ID
         sector = MapSector(self.next_sector_id())
         self.__sectors.append(sector)
-    
+
+# TODO write code to do robot movement.... include moving in map and sector.
+
+# TODO logic for orphan client
