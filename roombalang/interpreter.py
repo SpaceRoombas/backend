@@ -14,6 +14,7 @@ class Interpreter:
         while not self._done:
             self.tick()
 
+
     # evaluates a single node of the ast
     def tick(self):
         ptr = self.vm.tick(self._bytecode)

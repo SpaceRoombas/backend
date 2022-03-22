@@ -159,6 +159,9 @@ class Transpiler:
             args = []
 
             for i in tree.children[-2:0:-1]:
+                if i is None:
+                    break
+
                 args += ['puv', str(i.children[0]), 'set']
 
             return ['goto', skip] + \
@@ -174,5 +177,8 @@ class Transpiler:
             for i in tree.children[1:]:
                 args += self.transpile(i)
             return args + ['pua', iden]
+
+        elif token == "return":
+            return self.transpile(tree.children[0])
 
         raise NotImplementedError
