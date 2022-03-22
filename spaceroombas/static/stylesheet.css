@@ -1,0 +1,70 @@
+form {
+    background-color: #8A96B5;
+    padding-top: 0px;
+    height: 25%;
+    width: 50%;
+}
+
+input {
+    float: right;
+}
+
+label {
+    padding: 10px;
+    font-family: 'Changa';
+    font-weight: normal;
+}
+
+.button {
+    background-color: #505769;
+    color: white;
+    font-family: 'Oswald';
+    border:none;
+}
+
+.button:hover {
+    background-color: #444957;
+}
+    
+.centered {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.titlebar {
+    width: 100%;
+    height: 10%;
+    background-color: #505769;
+}
+
+.resetTitle {
+    font-family: 'Oswald';
+    color: white;
+    font-weight: bold;
+    font-size: 48px;
+    padding-left: 10px;
+}
+
+body {
+    background-color: black;
+}
+
+.flashes {
+    background-color: rgba(2, 97, 42, 0.356);
+    font-family: 'Changa';
+    font-weight: bold;
+    padding-left: 10px;
+}
+
+.flashError {
+    background-color: rgba(97, 2, 2, 0.849);
+    font-family: 'Changa';
+    font-weight: bold;
+    padding-left: 10px;
+}
+
+.userInput {
+    margin-top: 20px;
+}
