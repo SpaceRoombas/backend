@@ -185,7 +185,7 @@ def authorized():
         "message":"User is authorized."
     })
     
-@app.route("/forgotPass", methods = ["GET", "POST"]) #This method takes in the user email from Unity. Upon submit, user is sent email
+@app.route("/forgotPass", methods = ["POST"]) #This method takes in the user email from Unity. Upon submit, user is sent email
 async def forgotPassword():
     email = _safe_fetch_json_email(request.get_json())
     user = UserDbInfo.query.filter_by(email=email).first()
