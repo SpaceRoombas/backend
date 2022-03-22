@@ -1,20 +1,15 @@
 <html>
 <head>
-<title>Password Reset</title>
+<title>Expired Link</title>
 <link rel="stylesheet" href='/static/stylesheet.css' />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Changa">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Oswald">
 </head>
 
 <body>
-<div class='child titlebar'>
-    <p class='resetTitle'>PASSWORD RESET</p>
-</div>
-<form class='centered' method="POST" action="">
-    {{ form.hidden_tag() }}
     {% with messages = get_flashed_messages() %}
         {% if messages %}
-        <div class=flashes>
+        <div class=flashError>
         {% for message in messages %}
             <p>{{ message }}</p>
         {% endfor %}
@@ -22,17 +17,5 @@
         {% endif %}
     {% endwith %}
     {% block body %}{% endblock %}
-<div class='centered userInput'>
-    <p>
-        {{form.password.label}}
-        {{form.password}}<br>
-    </p>
-    <p>
-        {{form.confirmPassword.label}}
-        {{form.confirmPassword}}<br>
-    </p>
-    <p>{{form.submit(class='button')}}</p>
-</div>
-</form>
 </body>
 </html>  

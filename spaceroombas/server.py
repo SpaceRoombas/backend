@@ -1,6 +1,4 @@
 #from crypt import methods
-from ast import Pass
-import json
 from flask import Flask, flash
 from flask import jsonify
 from flask import request
@@ -14,8 +12,10 @@ import os
 from functools import wraps
 from sqlalchemy import true
 from sqlalchemy.exc import IntegrityError
-from flask_mail import Mail, Message
+from flask_mailing import Mail, Message
 from forms import PasswordResetForm
+
+mail = Mail()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
@@ -23,19 +23,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///userInfo.db'
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_SSL'] = True
-app.config['MAIL_USERNAME'] = "programming.game.emails@gmail.com"
+app.config['MAIL_USERNAME'] = os.environ.get('EMAIL_ADDRESS')
 app.config['MAIL_PASSWORD'] = os.environ.get('EMAIL_PASS')
-mail = Mail(app)
+mail.init_app(app)
 
 db = SQLAlchemy(app)
-
-def sendForgotPassEmail(user,token):
-    msg = Message()
-    msg.subject = "Password Reset"
-    msg.recipients = [user.email]
-    msg.sender = app.config['MAIL_USERNAME']
-    msg.body = f'''Click the link below to reset your password:\n{url_for('showResetForm', token=token,_external=true)}\nLink expires after 10 minutes'''
-    mail.send(msg)
 
 def token_required(func): #May not be needed, depending on what else we use tokens for
     @wraps(func)
@@ -52,12 +44,7 @@ def token_required(func): #May not be needed, depending on what else we use toke
         return func(*args, **kwargs)
     return decorated
 
-def hash(plaintext):
-    if plaintext is None:
-        return
-    m = sha256(plaintext.encode('utf-8'))
-    return m.hexdigest()
-            
+
 # Various models
 class UserDbInfo(db.Model):
     id = db.Column(db.Integer, primary_key = True)
@@ -88,6 +75,15 @@ class UserModel():
         m = sha256(plaintext.encode('utf-8'))
         return m.hexdigest()
 
+def _safe_fetch_json_email(json_req):
+    email = None
+    req_content = request.get_json()
+    try:
+        email = req_content['email']
+    except KeyError:
+        return
+    if not email is None:
+        return(email)
 
 def _safe_fetch_json_credentials(json_req):
     username = None
@@ -98,7 +94,7 @@ def _safe_fetch_json_credentials(json_req):
         username = req_content['username']
         password = req_content['password']
         email = req_content['email']
-    except TypeError:
+    except KeyError:
         return
     if not ((username is None) and (password is None) and (email is None)):
         return UserModel(username, password, email)
@@ -190,32 +186,41 @@ def authorized():
     })
     
 @app.route("/forgotPass", methods = ["GET", "POST"]) #This method takes in the user email from Unity. Upon submit, user is sent email
-def forgotPassword():
-    credentials = _safe_fetch_json_credentials(request.get_json())
-    user = UserDbInfo.query.filter_by(email=credentials.email).first()
+async def forgotPassword():
+    email = _safe_fetch_json_email(request.get_json())
+    user = UserDbInfo.query.filter_by(email=email).first()
     if user:
         token = jwt.encode({
                 'user':user.id,
                 'exp' : datetime.datetime.utcnow() + datetime.timedelta(seconds=600)
             },
                 app.config['SECRET_KEY'])
-        sendForgotPassEmail(user, token)
-        return("Password Reset sent")
+        
+        msg = Message(
+            subject = "Password Reset",
+            recipients = [user.email],
+            body = f'''Click the link below to reset your password:\n{url_for('showResetForm', token=token,_external=true)}\nLink expires after 10 minutes'''
+            
+        )
+    
+        await mail.send_message(msg)
+        return("Password Reset sent"), 200
     else:
         return("Email not found in the database"), 403
 
 
 @app.route("/resetPassForm/<token>", methods = ["GET", "POST"]) #This form will open once the user clicks the link in the sent email
 def showResetForm(token):
+    form = PasswordResetForm()
     user = UserDbInfo.verifyToken(token) #Check to see if token is associated with the user
     if user is None:
-        return("Invalid Token")
-    form = PasswordResetForm()
+        flash("Password reset link is expired. Please try again.")
+        return render_template('expired.html')
     if form.validate_on_submit(): #Once user hits submit, change their password to what they input
-        hashedPass = hash(form.password.data) #Hash password before storing in database
-        user.password = hashedPass
+        hashpw = UserModel(None, user.password, None).hashed_password #Hash password before storing in database
+        user.password = hashpw
         db.session.commit()
-        return("Password was commited")
+        flash("Your password was successfully changed.")
     return render_template('index.html', form=form)    
     
 

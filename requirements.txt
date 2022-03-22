@@ -4,4 +4,5 @@ flatbuffers == 2.0
 flask
 flask_sqlalchemy
 pyjwt
-flask_mail
+flask_mailing
+flask_wtf
