@@ -6,3 +6,4 @@ flask_sqlalchemy
 pyjwt
 flask_mailing
 flask_wtf
+lark

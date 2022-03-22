@@ -16,3 +16,7 @@ class MapUpdateRequestMessage():
     def __init__(self, chunk="all") -> None:
         self.req_chunk = chunk
         self.data = None
+
+class NewConnectionMessage():
+    def __init__(self, client_id) -> None:
+        self.client_id = client_id

@@ -8,7 +8,7 @@ from twisted.internet.task import LoopingCall
 from data import serialization
 from data.flats.message_type import message_type
 
-from data.messages import CarrierPigeon, Handshake, MapUpdateRequestMessage
+from data.messages import MapUpdateRequestMessage, NewConnectionMessage
 
 immediates = [
     message_type.ACK,
@@ -47,8 +47,7 @@ class SessionClient():
     def tick_send_message(self):
         try:
             msg = self.send_queue.get(False)
-            self.handler.send_data("some_message".encode('utf-8'))
-            # TODO Serialize
+            self.handler.send_data(bytes(msg))
         except Empty:
             return # send queue empty
 
@@ -82,7 +81,6 @@ class SessionHandler(protocol.Protocol):
         bufferSz = len(buffer)
         # Always send big endian
         bufferSzBytes = bufferSz.to_bytes(4, byteorder="big")
-        print("Sending it!...")
         # Send it
         self.transport.write(bufferSzBytes)
         self.transport.write(buffer)
@@ -106,12 +104,8 @@ class SessionHandler(protocol.Protocol):
             print("Reconnecting orphaned client")
             self.__factory.session_clients[self.__session_id].handler = self
 
-        # Add request for initial map
-        self.session_queue().put(ClientMessageWrapper(self.__session_id, MapUpdateRequestMessage()), True, 0.5)
-        
-        handshake_ack = utility_create_message_handshakeACK()
-
-        self.send_data(handshake_ack)
+        # Let game state know that a player is joined into the game
+        self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), True, 0.5)
 
     def dispatch_carrier_deserialize(self, carrier_bytes):
         carrier = serialization.deserialize_carrier(carrier_bytes)
@@ -176,8 +170,11 @@ class RoombaNetwork():
         return messages
 
     def enque_message(self, clientid, message):
+        packed_message = serialization.magically_package_object(message)
+        self.enque_serialized(clientid, packed_message)
+
+    def enque_serialized(self, clientid, packed_message):
         if self.factory is not None:
-            packed_message = serialization.magically_package_object(message)
 
             if packed_message is None:
                 print("Object couldn't be packaged and something really bad happened")
@@ -185,11 +182,11 @@ class RoombaNetwork():
 
             if clientid == "*": # This message gets put into *ALL* clients
                 for k, v in self.factory.session_clients.items():
-                    v.send_queue.put(message, True, 0.5)
+                    v.send_queue.put(packed_message, True, 0.5)
             else:
                 try:
                     client = self.factory.session_clients[clientid]
-                    client.send_queue.put(message, True, 0.5)
+                    client.send_queue.put(packed_message, True, 0.5)
                 except KeyError:
                     print("Client does not exist")
                     return
