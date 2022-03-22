@@ -1,5 +1,6 @@
 import copy
 
+MAX_INSTRUCTIONS_PER_TICK = 100
 
 class Stack:
     def __init__(self, parent=None, addr=None):
@@ -60,6 +61,8 @@ class VM:
     # runs until an external fn is hit and then breaks returning the position of the pointer
     def tick(self, bytecode):
 
+        executed = 0
+
         # set up labels
         for idx, i in enumerate(bytecode):
             if i == 'lbl':
@@ -67,6 +70,9 @@ class VM:
 
         # run bytecode
         while self.pointer != -1:
+
+            executed += 1
+
             try:
                 i = bytecode[self.pointer]
 
@@ -272,6 +278,9 @@ class VM:
 
                 if self.pointer >= len(bytecode):
                     self.pointer = -1
+                    break
+
+                if executed >= MAX_INSTRUCTIONS_PER_TICK:
                     break
 
             except Exception:
