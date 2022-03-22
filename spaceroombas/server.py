@@ -217,10 +217,13 @@ def showResetForm(token):
         flash("Password reset link is expired. Please try again.")
         return render_template('expired.html')
     if form.validate_on_submit(): #Once user hits submit, change their password to what they input
-        hashpw = UserModel(None, user.password, None).hashed_password #Hash password before storing in database
+        hashpw = UserModel(None, form.password.data, None).hashed_password #Hash password before storing in database
         user.password = hashpw
         db.session.commit()
         flash("Your password was successfully changed.")
+    elif form.submit(): #If passwords do not match on submit, flash an error message
+        if form.password.data != form.confirmPassword.data:
+            flash("Passwords must match")
     return render_template('index.html', form=form)    
     
 
