@@ -1,5 +1,5 @@
 from data import state
-
+import copy
 
 def test_expand_map(): #checks to see if map has walkable value and value for there being a wall/type of tile...Right now check if they are the same
     sector1 = state.MapSector("iddeeznuts")
@@ -125,29 +125,53 @@ def test_adding_new_sectors_hard():
     assert sector2.sect_right == sector3
     assert sector3.sect_left == sector2
 
-
-
 def test_change_walkable():
     game_state = state.GameState()
     loc = state.EntityLocation(game_state.map.get_sector("0,0"),20,20)
-    if game_state.map.check_tile_used(loc) == True:
-        assert game_state.map.check_tile_used(loc) == True
+    if game_state.map.check_tile_available(loc) == True:
+        assert game_state.map.check_tile_available(loc) == True
         game_state.map.update_walkable(loc,False)
-        assert game_state.map.check_tile_used(loc) == False
+        assert game_state.map.check_tile_available(loc) == False
 
-        assert game_state.map.check_tile_used(loc) == False
+        assert game_state.map.check_tile_available(loc) == False
         game_state.map.update_walkable(loc,True)
-        assert game_state.map.check_tile_used(loc) == True
+        assert game_state.map.check_tile_available(loc) == True
 
 def test_spawn_player():
     game_state = state.GameState()
     game_state.add_player("player1")
     assert len(game_state.players)==1
+    assert len(game_state.players["player1"].robots.keys())==1
+    game_state.add_robot("player1",state.EntityLocation(game_state.map.get_sector("0,0"),23,23))
+    assert len(game_state.players["player1"].robots.keys())==2
+
+def test_get_robot():
+    game_state = state.GameState()
+    game_state.add_player("player1")
+    keys = list(game_state.players["player1"].robots.keys())
+    assert game_state.get_robot("player1",keys[0]) != False
+
+def test_move_robot(): #TODO check up and down test cases 
+    game_state = state.GameState()
+    game_state.add_player("player1")
+    keys = list(game_state.players["player1"].robots.keys())
+    robot = game_state.get_robot("player1",keys[0]) 
+    assert robot != False
     
+    prev_location = copy.deepcopy(robot.location)
+
+    assert game_state.move_robot_right("player1",robot.robot_id) != False
+    assert prev_location.x +1 == robot.location.x
+    assert game_state.move_robot_left("player1",robot.robot_id) != False
+    assert prev_location.x == robot.location.x
+
 def test_walkable():
     game_state = state.GameState()
     game_state.add_player("player1")
-    assert game_state.map.check_tile_used(game_state.players["player1"].robots[0].location) == False
+    keys = list(game_state.players["player1"].robots.keys())
+    print(keys)
+    assert game_state.map.check_tile_available(game_state.players["player1"].robots[keys[0]].location) == False
+
 
 
 

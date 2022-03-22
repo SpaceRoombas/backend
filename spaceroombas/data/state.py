@@ -7,8 +7,6 @@ from uuid import uuid4
 class PlayerExistsError(ArgumentError):
     pass
 
-
-
 class MapSector():   
     def __init__(self, sector_id) -> None:
         self.land_map = mapgeneration.generate()# TODO update map to hold more information... like walkable
@@ -32,6 +30,8 @@ class EntityLocation():
         self.sector = sector
         self.x = x
         self.y = y
+    def __str__(self):
+        return "sec:"+self.sector.sector_id+" x,y:"+str(self.x)+","+str(self.y)
 
 class MapState():
 
@@ -64,10 +64,10 @@ class MapState():
                 sector2.sect_up = sector1
                 return True
             else:
-                print("sectors do not connect",sector1id,sector2id)
+                #print("sectors do not connect",sector1id,sector2id)
                 return False
         else:
-            print("sectors do not exist in map",sector1id,sector2id)
+            #print("sectors do not exist in map",sector1id,sector2id)
             return False
 
     def get_sector(self, sector_id):
@@ -94,14 +94,14 @@ class MapState():
         else:
             print("error sector already created")
             return False
+
     def update_walkable(self,location: EntityLocation, walkable):
         current_sector = self.get_sector(location.sector.sector_id)
         current_sector.land_map[location.x][location.y][0] = walkable
 
-    def check_tile_used(self,location: EntityLocation):   
+    def check_tile_available(self,location: EntityLocation):   
         current_sector = self.get_sector(location.sector.sector_id)
         return current_sector.land_map[location.x][location.y][0]
-
 
 class GameObject(): #TODO game object... we can have buildings ext
     def __init__(self, owner_id, location: EntityLocation):
@@ -114,7 +114,7 @@ class PlayerRobot():#TODO make player robot inherit from a general game object
     def __init__(self, owner_id, location: EntityLocation):
         self.owner = owner_id
         self.robot_id = "r"+str(self.robot_count)
-        self.robot_count += 1
+        PlayerRobot.robot_count += 1
         self.location = location
         self.firmware = None #TODO add current firmware/ function being run by robot
 
@@ -122,13 +122,13 @@ class PlayerState():
     def __init__(self, player_id,sector_id):
         self.home_sector = sector_id
         self.player_id = player_id
-        self.robots = list() 
+        self.robots = dict()
         self.player_firmware = None
     
     def add_robot(self,location: EntityLocation):
-        self.robots.append(PlayerRobot(self.player_id,location))
+        robot = PlayerRobot(self.player_id,location)
+        self.robots[robot.robot_id]=robot
         
-
 class GameState():
     def __init__(self):
         self.map = MapState()
@@ -146,7 +146,7 @@ class GameState():
         y=20
         self.add_robot(player_id,EntityLocation(sector,x,y))
 
-    def add_robot(self,player_id,location: EntityLocation):
+    def add_robot(self,player_id,location: EntityLocation):#TODO set up so the robot is spawned in valid location
         if self.players.get(player_id) == None:
             print("invalid player id to add robot too")
             return False
@@ -155,8 +155,80 @@ class GameState():
             self.map.update_walkable(location,False)
             return True
 
+    def get_robot(self,player_id,robot_id):
+        if(self.players.get(player_id)== None):
+            print("player id doesnt exist:",player_id)
+            return False
+        player = self.players[player_id]
+        if player.robots.get(robot_id) == None:
+            print("robot id does not exist")
+            return False
+        return player.robots[robot_id]
+    
+    #TODO make more efficent code for movement 
+    def move_robot_up(self,player_id,robot_id):
+        robot = self.get_robot(player_id,robot_id)
+        if robot == False:
+            print("couldnt find robot")
+            return False
+        wantedLocation = EntityLocation(robot.location.sector,robot.location.x,robot.location.y)
+        wantedLocation.y +=1 
+        if self.map.check_tile_available(wantedLocation) == True:
+            self.map.update_walkable(robot.location,True)
+            robot.location.y += 1
+            self.map.update_walkable(robot.location,False)
+            print("robot moved to ",robot.location)
+            return True
+        else:
+            print("tile was in use", wantedLocation)
+    
+    def move_robot_down(self,player_id,robot_id):
+        robot = self.get_robot(player_id,robot_id)
+        if robot == False:
+            print("couldnt find robot")
+            return False
+        wantedLocation = EntityLocation(robot.location.sector,robot.location.x,robot.location.y)
+        wantedLocation.y -=1 
+        if self.map.check_tile_available(wantedLocation) == True:
+            self.map.update_walkable(robot.location,True)
+            robot.location.y -= 1
+            self.map.update_walkable(robot.location,False)
+            print("robot moved to ",robot.location)
+            return True
+        else:
+            print("tile was in use", wantedLocation)
 
     def move_robot_left(self,player_id,robot_id):
-        return
+        robot = self.get_robot(player_id,robot_id)
+        if robot == False:
+            print("couldnt find robot")
+            return False
+        wantedLocation = EntityLocation(robot.location.sector,robot.location.x,robot.location.y)
+        wantedLocation.x -=1 
+        if self.map.check_tile_available(wantedLocation) == True:
+            self.map.update_walkable(robot.location,True)
+            robot.location.x -= 1
+            self.map.update_walkable(robot.location,False)
+            print("robot moved to ",robot.location)
+            return True
+        else:
+            print("tile was in use", wantedLocation)
+    
+    def move_robot_right(self,player_id,robot_id):
+        robot = self.get_robot(player_id,robot_id)
+        if robot == False:
+            print("couldnt find robot")
+            return False
+        wantedLocation = EntityLocation(robot.location.sector,robot.location.x,robot.location.y)
+        wantedLocation.x +=1 
+        if self.map.check_tile_available(wantedLocation) == True:
+            self.map.update_walkable(robot.location,True)
+            robot.location.x += 1
+            self.map.update_walkable(robot.location,False)
+            print("robot moved to ",robot.location)
+            return True
+        else:
+            print("tile was in use", wantedLocation)
 
+# TODO add logic for movement between sectors, check movement code to be neater
 # TODO logic for orphan client
