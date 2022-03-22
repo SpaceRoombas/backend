@@ -1,31 +1,25 @@
-from pytest import Session
+from data.state import GameState
 import client_networking
-from map import mapgeneration
 from twisted.internet.task import LoopingCall
 
-from data.types import GameMap
 import message_delegators
-
-
-class GameState():
-    def __init__(self):
-        self.map = None
 
 def game_loop(game_state, network):
     
     client_messages = network.fetch_messages()
 
-    # Delegate all messages
+    # Delegate all messages and apply to game state
     for client_message in client_messages:
         message_delegators.delegate_client_message(client_message, game_state, network)
 
+    # TODO Execute step of interpreters
+
+    # TODO Apply interpreter results to game state
+
+    # TODO Send messages for gamestate changes (and location updates)
+
 network = client_networking.RoombaNetwork(9001)
-
 game_state = GameState()
-
-print("Generating initial map")
-game_state.map = GameMap()
-game_state.map.land_map = mapgeneration.generate()
 
 print("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
