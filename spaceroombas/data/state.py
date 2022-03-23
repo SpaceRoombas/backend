@@ -32,6 +32,34 @@ class EntityLocation():
         self.y = y
     def __str__(self):
         return "sec:"+self.sector.sector_id+" x,y:"+str(self.x)+","+str(self.y)
+    
+class PlayerRobot(): 
+    def __init__(self, owner_id, location: EntityLocation):
+        self.owner = owner_id
+        self.location = location
+
+class PlayerState():
+
+    def __init__(self, player_id):
+        self.player_id = player_id
+        self.robots = list() # TODO probably add default robot?
+        self.player_firmware = None
+        
+        # Player starts with 1 robot
+        # TODO assign robot to player
+
+class GameState():
+    def __init__(self):
+        self.map = MapState()
+        self.players = dict()
+
+    def add_player(self, player_id) -> None:
+
+        playerState = PlayerState(player_id)
+
+        if player_id in self.players:## TODO implement logic here for orphan
+            raise PlayerExistsError("Player already exists")
+        self.players[player_id] = playerState
 
 class MapState():
 
@@ -231,4 +259,10 @@ class GameState():
             print("tile was in use", wantedLocation)
 
 # TODO add logic for movement between sectors, check movement code to be neater
+    def generate_map_sector(self): ## TODO incorporate logic for adding to current graph/ update ID
+        sector = MapSector(self.next_sector_id())
+        self.__sectors.append(sector)
+
+# TODO write code to do robot movement.... include moving in map and sector.
+
 # TODO logic for orphan client
