@@ -1,9 +1,8 @@
 class CarrierPigeon():
-    def __init__(self, type=None, hint=None, payload=None):
+    def __init__(self, type=None, payload_type=None, payload=None):
         self.type = type
-        self.hint = hint
+        self.payload_type = payload_type
         self.payload = payload
-
 
 class Handshake():
     def __init__(self, username=None, signature=None, creation_time=None):

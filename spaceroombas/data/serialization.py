@@ -1,177 +1,112 @@
-from multiprocessing.sharedctypes import Value
-
-from .types import GameMap
-from .flats.message_type import message_type
-from .flats.session_handshake import session_handshake
-from .flats import game_map
-from .flats import carrier_pigeon
-import flatbuffers
+from .state import MapSector
 from . import messages
+from .messages import CarrierPigeon, Handshake
 
-# Maps to the backing flat
-message_types = {
-    "Message": message_type().Message,
-    "ACK": message_type().ACK
+from json import JSONEncoder, dumps as json_string, loads as load_json
+
+class PayloadMapper():
+    def map(self, dict):
+        raise NotImplementedError
+
+class HandshakePayloadMapper(PayloadMapper):
+
+    def map(self, dict):
+        return Handshake(dict['user'], dict['signature'], dict['time'])
+
+carrier_mappers = {
+    'handshake':HandshakePayloadMapper()
 }
 
-# Various mappers
-class MessageMapper:
-    def mapBuffer(self, buffer):
+class CarrierPigeonEncoder(JSONEncoder):
+    def default(self, obj):
+        return {
+            "type":obj.type,
+            "payload_type":obj.payload_type,
+            "payload":obj.payload
+        }
+
+class HandshakeEncoder(JSONEncoder):
+    def default(self, obj):
         raise NotImplementedError
+    
+    def encode(self, o) -> str:
+        return super().encode(o)
 
-    def mapMessage(self, message):
-        raise NotImplementedError
+class MapSectorEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, MapSector):
+            return {
+                "land_map":obj.land_map,
+                "sect_up":self._safe_get_sector_id(obj.sect_up),
+                "sect_down":self._safe_get_sector_id(obj.sect_down),
+                "sect_left":self._safe_get_sector_id(obj.sect_left),
+                "sect_right":self._safe_get_sector_id(obj.sect_right),
+            }
 
+    def _safe_get_sector_id(self, sector):
+        if sector is None:
+            return None
+        return sector.sector_id
 
-class CarrierMapper(MessageMapper):
-    def unpack_carrier_payload(self, carrier):
-        payloadsz = carrier.PayloadLength()
-        payload_buffer = bytearray(payloadsz)
+class JsonEncodingDelegator(JSONEncoder):
 
-        for i in range(0, payloadsz):
-            payload_buffer[i] = carrier.Payload(i)
-        return payload_buffer
+    def __init__(self, encoders) -> None:
+        super().__init__()
+        self.encoders = encoders
+        self.args = ()
+        self.kwargs = {}
 
-    def mapBuffer(self, buffer):
-        # deserialize
-        carrier = carrier_pigeon.carrier_pigeon.GetRootAs(buffer, 0)
-        hint = carrier.Hint().decode('utf-8')
-        message_type = carrier.Type()
+    def __call__(self, *args, **kwds):
+        self.args = args
+        self.kwargs = kwds
+
+        self.fallbackEncoder = JSONEncoder(*self.args, **self.kwargs)
+        json_encoder = JSONEncoder(*args, **kwds)
+        json_encoder.default = self.default
+        return json_encoder
+
+    def default(self, mObj):
+        objType = type(mObj)
+        try:
+            encoder = self.encoders[objType]
+            return encoder(*self.args, **self.kwargs).default(mObj)
+        except KeyError:
+            return self.fallbackEncoder.default(mObj)
+
+obj_encoders = {
+            CarrierPigeon:CarrierPigeonEncoder,
+            messages.Handshake:HandshakeEncoder,
+            MapSector:MapSectorEncoder
+}
+
+encodingDelegator = JsonEncodingDelegator(obj_encoders)
+
+def map_carrier(carrier_dict):
+    payload_type = carrier_dict['payload_type']
+
+    try:
+        mapper = carrier_mappers[payload_type]
+        try:
+            carrier_payload = mapper.map(carrier_dict['payload'])
+        except KeyError:
+            print("Carrier payload has missing key")
+            carrier_payload = None
+            payload_type = "invalid"
+    except KeyError:
+        print("Mapper doesn't exist for payload type")
         carrier_payload = None
+        payload_type = "invalid"
 
-        if not carrier.PayloadIsNone():
-            carrier_payload = self.unpack_carrier_payload(carrier)
+    return CarrierPigeon(carrier_dict['type'], payload_type, carrier_payload)
 
-        return messages.CarrierPigeon(message_type, hint, carrier_payload)
+def serialize(message_type, mObj):
+    objTypeName = str(type(mObj).__name__)
+    pigeon = CarrierPigeon("message", objTypeName, mObj)
+    return json_string(pigeon, cls=encodingDelegator, separators=(',', ':'))
 
-class HandshakeMapper(MessageMapper):
-    def mapBuffer(self, buffer):
-        handshake = session_handshake.GetRootAs(buffer, 0)
-        return messages.Handshake(
-            handshake.Username().decode('utf-8'),
-            handshake.Signature().decode('utf-8'),
-            handshake.CreationTime()
-        )
+package_for_shipping = lambda mObj: serialize("message", mObj)
 
-class GameMapMapper(MessageMapper):
-
-    def flatten_game_map(self, map_vector):
-        vert_len = len(map_vector)
-        horiz_len = len(map_vector[0])
-        flattened_map = [None] * (vert_len * horiz_len)
-        cell = 0
-        for i in range(0, vert_len):
-            for k in range(0, horiz_len):
-                flattened_map[cell] = map_vector[i][k]
-                cell = cell + 1
-        
-        return flattened_map
-
-    def mapMessage(self, message):
-        # Safety first, kids
-        if type(message) is not GameMap:
-            print("Cannot map unexpected type ¯\_(ツ)_/¯")
-
-        flatmap = self.flatten_game_map(message.land_map)
-        builder = flatbuffers.Builder(1024)
-        game_map.StartLandMapVector(builder, len(flatmap))
-        land_map_offset = util_create_vector_buffer(builder, flatmap)
-
-        # Serialize
-        game_map.Start(builder)
-        game_map.AddLandMap(builder, land_map_offset)
-        buffer_offset = game_map.End(builder)
-
-        builder.Finish(buffer_offset)
-        return builder.Output()
-
-# Mapper lookup tables
-mapperTypes = {
-    "carrier_pigeon": CarrierMapper,
-    "handshake": HandshakeMapper,
-    "game_map": GameMapMapper,
-}
-
-mappers = {
-    CarrierMapper:CarrierMapper(),
-    HandshakeMapper:HandshakeMapper(),
-    GameMap:GameMapMapper()
-}
-
-def _safe_fetch_mapper(mapper_hint):
-    mapperType = None
-    mapper = None
-    try:
-        mapperType = mapperTypes[mapper_hint]
-        mapper = mappers[mapperType]
-    except KeyError:
-        print("Can't map type `%s` because a mapper doesn't exist" % (mapper_hint))
-        raise RuntimeError  # TODO gracefully handle this by returning an error type
-    return mapper
-
-
-def _carrier_has_payload(carrier):
-    return carrier.payload is not None
-
-
-def _deserialize_carrier_payload(carrier):
-    mapper = _safe_fetch_mapper(carrier.hint)
-    carrier.payload = mapper.mapBuffer(carrier.payload)
-
-
-def deserialize_carrier(carrier_bytes):
-    mapper = _safe_fetch_mapper("carrier_pigeon")
-    carrier = mapper.mapBuffer(carrier_bytes)
-
-    if _carrier_has_payload(carrier):
-        _deserialize_carrier_payload(carrier)
-
-    return carrier
-
-
-def magically_package_object(mObj):
-    obj_type = type(mObj)
-
-    # Grab the mapper
-    try:
-        mapper = mappers[obj_type]
-    except KeyError:
-        print("Cannot map that type")
-        return
-    
-    return mapper.mapMessage(mObj)
-
-
-
-# # # #  # # #  # # #  # # #  # # 
-#           UTILITY
-# # #  # # #  # # #  # # #  # # # 
-
-def create_carrier_pigeon(message_hint, payload, type=message_types["Message"]):
-
-    # Delegate object packing from somewhere?
-    builder = flatbuffers.Builder(2048)
-
-    # Serialize non-scalars
-    # Message Hint
-    hint_scalar = builder.CreateString(message_hint)
-
-    # Serialize scalars
-    carrier_pigeon.Start(builder)
-
-    carrier_pigeon.AddHint(builder, hint_scalar)
-    carrier_pigeon.AddType(builder, type)
-
-    bufferID = carrier_pigeon.End(builder)
-
-    # done
-    builder.Finish(bufferID)
-    return bytes(builder.Output())
-
-def util_create_vector_buffer(builder, vector):
-    vecSz = len(vector)
-
-    for i in reversed(range(0, vecSz)):
-        builder.PrependByte(vector[i])
-    
-    return builder.EndVector()
+def unpackage_carrier(carrier):
+    carrier_dict = load_json(carrier)
+    mapped_carrier = map_carrier(carrier_dict)
+    return mapped_carrier

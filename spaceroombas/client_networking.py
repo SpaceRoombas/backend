@@ -1,4 +1,3 @@
-from distutils.log import error
 from queue import LifoQueue, Empty
 from twisted.internet.interfaces import IAddress
 from twisted.internet import protocol, reactor
@@ -11,22 +10,10 @@ from data.flats.message_type import message_type
 from data.messages import MapUpdateRequestMessage, NewConnectionMessage
 
 immediates = [
-    message_type.ACK,
-    message_type.Handshake,
+    'invalid',
+    'handshake',
 ]
 
-def utility_create_message_connectionACK():
-    return serialization.create_carrier_pigeon("connect", None, serialization.message_types["ACK"])
-
-def utility_create_message_recieveACK():
-    return serialization.create_carrier_pigeon("recieve", None, serialization.message_types["ACK"])
-
-def utility_create_message_handshakeACK():
-    return serialization.create_carrier_pigeon("handshake", None, serialization.message_types["ACK"])
-
-"""
-Checks if message requires immediate service
-"""
 def is_immediate(carrier):
     return carrier.type in immediates
 
@@ -47,9 +34,10 @@ class SessionClient():
     def tick_send_message(self):
         try:
             msg = self.send_queue.get(False)
-            self.handler.send_data(bytes(msg))
+            encoded = bytes(msg, 'utf-8')
+            self.handler.send_data(encoded)
         except Empty:
-            return # send queue empty
+            pass # send queue empty
 
 class SessionHandler(protocol.Protocol):
     def __init__(self, factory) -> None:
@@ -108,13 +96,15 @@ class SessionHandler(protocol.Protocol):
         self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), True, 0.5)
 
     def dispatch_carrier_deserialize(self, carrier_bytes):
-        carrier = serialization.deserialize_carrier(carrier_bytes)
-        message = None
+        if not isinstance(carrier_bytes, bytearray):
+            # TODO maybe throw some sort of error here?
+            return
+        carrier = serialization.unpackage_carrier(carrier_bytes)
 
         # Determine if message requies immediate service or 3-day shipping
         if is_immediate(carrier):
             # do stuff, return. For now, handle a handshake!
-            if carrier.type == message_type.Handshake:
+            if carrier.type == 'handshake':
                 self.handle_handshake(carrier.payload)
             return # immediate messages are not enqueued
 
@@ -124,7 +114,6 @@ class SessionHandler(protocol.Protocol):
             self.session_queue().put(message_wrapper, True, 0.5)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
-
 
 class SessionHandlerFactory(protocol.Factory):
 
@@ -140,7 +129,6 @@ class SessionHandlerFactory(protocol.Factory):
 
     def buildProtocol(self, addr: IAddress):
         return SessionHandler(self)
-
 
 class RoombaNetwork():
 
@@ -170,7 +158,12 @@ class RoombaNetwork():
         return messages
 
     def enque_message(self, clientid, message):
-        packed_message = serialization.magically_package_object(message)
+        try:
+            packed_message = serialization.package_for_shipping(message)
+        except TypeError:
+            print("Attempted to send message without an associated mapper.. ignoring..")
+            return
+
         self.enque_serialized(clientid, packed_message)
 
     def enque_serialized(self, clientid, packed_message):

@@ -1,4 +1,5 @@
 from data.messages import MapUpdateRequestMessage, NewConnectionMessage
+from data.state import PlayerExistsError
 
 class MessageDelegator:
 
@@ -22,10 +23,11 @@ class NewConnectionDelegator(MessageDelegator):
         # Send a map
         map_sector = game_state.map.get_sector(0)
         network.enque_message(messageWrapper.client, map_sector)
-        game_state.add_player(message.client_id)
 
-        # TODO Send any other inital connection messages here
-
+        try:
+            game_state.add_player(message.client_id)
+        except PlayerExistsError:
+            return # Any required logic to handle the case where a player exists
 
 delegators = {
     MapUpdateRequestMessage:MapUpdateRequestMessageDelegator(),
@@ -38,7 +40,7 @@ def delegate_client_message(messageWrapper, game_state, network):
     try:
         delegator = delegators[msg_type]
     except KeyError:
-        print("Failed delegate message (do not have a handler for that message)")
+        print("Failed delegating message (do not have a handler for that message)")
         return
 
     delegator.delegate(messageWrapper, game_state, network)
