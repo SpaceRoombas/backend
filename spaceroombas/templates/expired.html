@@ -1,0 +1,21 @@
+<html>
+<head>
+<title>Expired Link</title>
+<link rel="stylesheet" href='/static/stylesheet.css' />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Changa">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Oswald">
+</head>
+
+<body>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class=flashError>
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+        <div>
+        {% endif %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+</body>
+</html>  

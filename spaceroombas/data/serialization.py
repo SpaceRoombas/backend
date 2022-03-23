@@ -1,7 +1,6 @@
 from multiprocessing.sharedctypes import Value
 
 from .types import GameMap
-from . import state
 from .flats.message_type import message_type
 from .flats.session_handshake import session_handshake
 from .flats import game_map
@@ -86,51 +85,17 @@ class GameMapMapper(MessageMapper):
         builder.Finish(buffer_offset)
         return builder.Output()
 
-class MapSectorMapper(MessageMapper):
-
-    def flatten_game_map(self, map_vector):
-        vert_len = len(map_vector)
-        horiz_len = len(map_vector[0])
-        flattened_map = [None] * (vert_len * horiz_len)
-        cell = 0
-        for i in range(0, vert_len):
-            for k in range(0, horiz_len):
-                flattened_map[cell] = map_vector[i][k]
-                cell = cell + 1
-        
-        return flattened_map
-
-    def mapMessage(self, message):
-        # Safety first, kids
-        if type(message) is not state.MapSector:
-            print("Cannot map unexpected type ¯\_(ツ)_/¯")
-
-        flatmap = self.flatten_game_map(message.land_map)
-        builder = flatbuffers.Builder(1024)
-        game_map.StartLandMapVector(builder, len(flatmap))
-        land_map_offset = util_create_vector_buffer(builder, flatmap)
-
-        # Serialize
-        game_map.Start(builder)
-        game_map.AddLandMap(builder, land_map_offset)
-        buffer_offset = game_map.End(builder)
-
-        builder.Finish(buffer_offset)
-        return builder.Output()
-
 # Mapper lookup tables
 mapperTypes = {
     "carrier_pigeon": CarrierMapper,
     "handshake": HandshakeMapper,
     "game_map": GameMapMapper,
-    "map_sector" : MapSectorMapper,
 }
 
 mappers = {
     CarrierMapper:CarrierMapper(),
     HandshakeMapper:HandshakeMapper(),
-    GameMap:GameMapMapper(),
-    state.MapSector:MapSectorMapper()
+    GameMap:GameMapMapper()
 }
 
 def _safe_fetch_mapper(mapper_hint):
