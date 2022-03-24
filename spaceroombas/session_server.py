@@ -25,8 +25,6 @@ network = client_networking.RoombaNetwork(9001)
 game_state = GameState()
 
 
-fns = {"print": (lambda val: print(val[0]), 1)}
-
 print("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
 game_looper.start(0.2)

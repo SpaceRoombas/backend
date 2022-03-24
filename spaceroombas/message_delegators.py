@@ -21,7 +21,7 @@ class NewConnectionDelegator(MessageDelegator):
         message = messageWrapper.message
 
         # Send a map
-        map_sector = game_state.map.get_sector(0)
+        map_sector = game_state.map.get_sector('0,0')
         network.enque_message(messageWrapper.client, map_sector)
 
         try:
