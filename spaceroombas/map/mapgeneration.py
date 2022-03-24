@@ -44,6 +44,16 @@ def Run_Simulation(x,y,rand,stay,birth,steps,sides = False):
     for i in range(steps):
         world = Update_World(world,stay,birth,sides)
     return world
+def Append_Walkable(prev_map):
+    new_map = []
+    for y in range(len(prev_map)):
+        new_map.append([])
+        for x in range(len(prev_map[0])):
+            if prev_map[x][y] == 1:
+                new_map[y].append([False,prev_map[x][y]])
+            else:
+                new_map[y].append([True,prev_map[x][y]])
+    return new_map
 
 def generate():
-    return Run_Simulation(50,50,.4,4,6,5) #2gold clusters 
+    return Append_Walkable(Run_Simulation(50,50,.4,4,6,5)) #2gold clusters 
