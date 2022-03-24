@@ -5,9 +5,8 @@ from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.task import LoopingCall
 
 from data import serialization
-from data.flats.message_type import message_type
 
-from data.messages import MapUpdateRequestMessage, NewConnectionMessage
+from data.messages import NewConnectionMessage
 
 immediates = [
     'invalid',
