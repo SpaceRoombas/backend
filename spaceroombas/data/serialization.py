@@ -1,6 +1,6 @@
 from .state import MapSector
 from . import messages
-from .messages import CarrierPigeon, Handshake
+from .messages import CarrierPigeon, Handshake, PlayerDetails
 
 from json import JSONEncoder, dumps as json_string, loads as load_json
 
@@ -13,8 +13,14 @@ class HandshakePayloadMapper(PayloadMapper):
     def map(self, dict):
         return Handshake(dict['user'], dict['signature'], dict['time'])
 
+class PlayerDetailsMapper(PayloadMapper):
+    def map(self, dict):
+        return PlayerDetails(dict['player_name'], dict['server_address'], 
+        dict['token_millis'], dict['match_end_millis'], dict['signature'])
+
 carrier_mappers = {
-    'handshake':HandshakePayloadMapper()
+    'handshake':HandshakePayloadMapper(),
+    'player_details':PlayerDetailsMapper()
 }
 
 class CarrierPigeonEncoder(JSONEncoder):
@@ -27,7 +33,11 @@ class CarrierPigeonEncoder(JSONEncoder):
 
 class HandshakeEncoder(JSONEncoder):
     def default(self, obj):
-        raise NotImplementedError
+        return {
+            'username':obj.username,
+            'status':obj.status,
+            'signature':obj.signature
+        }
     
     def encode(self, o) -> str:
         return super().encode(o)
@@ -101,7 +111,7 @@ def map_carrier(carrier_dict):
 
 def serialize(message_type, mObj):
     objTypeName = str(type(mObj).__name__)
-    pigeon = CarrierPigeon("message", objTypeName, mObj)
+    pigeon = CarrierPigeon(message_type, objTypeName, mObj)
     return json_string(pigeon, cls=encodingDelegator, separators=(',', ':'))
 
 package_for_shipping = lambda mObj: serialize("message", mObj)

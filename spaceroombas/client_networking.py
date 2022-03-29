@@ -3,6 +3,7 @@ from twisted.internet.interfaces import IAddress
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.task import LoopingCall
+from data.messages import Handshake
 
 from data import serialization
 
@@ -10,7 +11,7 @@ from data.messages import NewConnectionMessage
 
 immediates = [
     'invalid',
-    'handshake',
+    'handshake'
 ]
 
 def is_immediate(carrier):
@@ -73,7 +74,6 @@ class SessionHandler(protocol.Protocol):
         self.transport.write(buffer)
 
     def handle_handshake(self, message):
-        handshake_ack = None
         # Check handshake signature
         self.__session_id = message.username
 
@@ -91,8 +91,17 @@ class SessionHandler(protocol.Protocol):
             print("Reconnecting orphaned client")
             self.__factory.session_clients[self.__session_id].handler = self
 
+        # TODO verify handshake
+        self.send_handshake_response(self.__session_id, message.signature, Handshake.STATUS_OK)
+
         # Let game state know that a player is joined into the game
         self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), True, 0.5)
+
+    def send_handshake_response(self, username, signature, status):
+        hnd = Handshake(username, signature, status)
+        serialized = serialization.serialize("handshake", hnd)
+        encoded = bytes(serialized, 'utf-8')
+        self.send_data(encoded)
 
     def dispatch_carrier_deserialize(self, carrier_bytes):
         if not isinstance(carrier_bytes, bytearray):
@@ -109,7 +118,7 @@ class SessionHandler(protocol.Protocol):
 
         # Unpack message and enque
         try:
-            message_wrapper = ClientMessageWrapper(self.__session_id, message)
+            message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
             self.session_queue().put(message_wrapper, True, 0.5)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
