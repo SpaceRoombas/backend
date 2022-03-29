@@ -138,7 +138,7 @@ class GameState():
         sector = self.map.get_sector("0,0") #TODO implement logic to spawn new player in their own starting sector/for now to base
         playerState = PlayerState(player_id,sector)
 
-        if player_id in self.players:## TODO implement logic here for orphan
+        if player_id in self.players:## TODO implement logic here for orphan clients
             raise PlayerExistsError("Player already exists")
 
         self.players[player_id] = playerState

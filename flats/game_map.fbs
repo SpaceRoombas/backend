@@ -1,5 +1,0 @@
-
-table game_map {
-    chunk:string;
-    land_map:[byte]; // since we are litterally sending a 1 or 0
-}

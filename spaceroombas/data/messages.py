@@ -1,14 +1,26 @@
 class CarrierPigeon():
-    def __init__(self, type=None, hint=None, payload=None):
+    def __init__(self, type=None, payload_type=None, payload=None):
         self.type = type
-        self.hint = hint
+        self.payload_type = payload_type
         self.payload = payload
 
-
 class Handshake():
-    def __init__(self, username=None, signature=None, creation_time=None):
-        self.creation_time = creation_time
+
+    STATUS_OK = 200
+    STATUS_ORPHAN_OK = 201
+    STATUS_VERIFY_FAILED = 403
+
+    def __init__(self, username=None, signature=None, status=None):
         self.username = username
+        self.signature = signature
+        self.status = status
+
+class PlayerDetails():
+    def __init__(self, name, server, token_time, match_expire, signature):
+        self.username = name
+        self.server = server
+        self.token_time = token_time
+        self.match_expire = match_expire
         self.signature = signature
 
 class MapUpdateRequestMessage():
