@@ -1,8 +1,12 @@
 from argparse import ArgumentError
+import imp
 from site import setcopyright
 from tokenize import String
 from map import mapgeneration
 from uuid import uuid4
+from roombalang import interpreter
+from roombalang import parser
+from roombalang import transpiler
 
 class PlayerExistsError(ArgumentError):
     pass
@@ -111,32 +115,41 @@ class GameObject(): #TODO game object... we can have buildings ext
 
 class PlayerRobot():#TODO make player robot inherit from a general game object 
     robot_count = 0
-    def __init__(self, owner_id, location: EntityLocation):
+    def __init__(self, owner_id, location: EntityLocation, parser, transpiler):
         self.owner = owner_id
         self.robot_id = "r"+str(self.robot_count)
         PlayerRobot.robot_count += 1
         self.location = location
-        self.firmware = None #TODO add current firmware/ function being run by robot
+        self.firmware = None #TODO add current firmware/ function being run by robot note to whoever implements this, make sure if firmware is changed interpreter is recreated.
+        self.interpreter = interpreter.Interpreter(self.firmware, {}, parser, transpiler)
+
+    def tick(self, fns):
+        self.interpreter.set_fns(fns)
+        self.interpreter.tick()
 
 class PlayerState():
-    def __init__(self, player_id,sector_id):
+    def __init__(self, player_id, sector_id, parser, transpiler):
         self.home_sector = sector_id
         self.player_id = player_id
         self.robots = dict()
         self.player_firmware = None
+        self.parser = parser
+        self.transpiler = transpiler
     
     def add_robot(self,location: EntityLocation):
-        robot = PlayerRobot(self.player_id,location)
+        robot = PlayerRobot(self.player_id,location,self.parser,self.transpiler)
         self.robots[robot.robot_id]=robot
         
 class GameState():
     def __init__(self):
         self.map = MapState()
         self.players = dict()
+        self.parser = parser.Parser()
+        self.transpiler = transpiler.Transpiler()
 
     def add_player(self, player_id):
         sector = self.map.get_sector("0,0") #TODO implement logic to spawn new player in their own starting sector/for now to base
-        playerState = PlayerState(player_id,sector)
+        playerState = PlayerState(player_id,sector,self.parser, self.transpiler)
 
         if player_id in self.players:## TODO implement logic here for orphan clients
             raise PlayerExistsError("Player already exists")
@@ -148,7 +161,7 @@ class GameState():
 
     def add_robot(self,player_id,location: EntityLocation):#TODO set up so the robot is spawned in valid location
         if self.players.get(player_id) == None:
-            print("invalid player id to add robot too")
+            print("invalid player id to add robot to")
             return False
         else:
             self.players[player_id].add_robot(location)
@@ -188,7 +201,8 @@ class GameState():
             print("couldnt find robot")
             return False
         wantedLocation = EntityLocation(robot.location.sector,robot.location.x,robot.location.y)
-        wantedLocation.y -=1 
+        wantedLocation.y -=1
+        
         if self.map.check_tile_available(wantedLocation) == True:
             self.map.update_walkable(robot.location,True)
             robot.location.y -= 1
