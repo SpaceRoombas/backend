@@ -20,3 +20,6 @@ class Interpreter:
         ptr = self.vm.tick(self._bytecode)
         if ptr == -1:
             self._done = True
+
+    def set_fns(self, fns):
+        self.vm.external_fns = fns
