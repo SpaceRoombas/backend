@@ -9,7 +9,7 @@ from roombalang import parser
 from roombalang import transpiler
 
 
-class PlayerExistsError(ArgumentError):
+class PlayerExistsError(RuntimeError):
     pass
 
 

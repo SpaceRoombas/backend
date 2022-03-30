@@ -11,7 +11,7 @@ class PayloadMapper():
 class HandshakePayloadMapper(PayloadMapper):
 
     def map(self, dict):
-        return Handshake(dict['user'], dict['signature'], dict['time'])
+        return Handshake(dict['username'], dict['signature'], dict['status'])
 
 class PlayerDetailsMapper(PayloadMapper):
     def map(self, dict):
@@ -45,8 +45,13 @@ class HandshakeEncoder(JSONEncoder):
 class MapSectorEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, MapSector):
+            # Package land map
+            # Note: This is probably expensive
+            mapsz = self._get_map_size(obj.land_map)
             return {
-                "land_map":obj.land_map,
+                "land_map":self.encode_landmap(obj.land_map),
+                "map_rows":mapsz[0],
+                "map_cols":mapsz[1],
                 "sect_up":self._safe_get_sector_id(obj.sect_up),
                 "sect_down":self._safe_get_sector_id(obj.sect_down),
                 "sect_left":self._safe_get_sector_id(obj.sect_left),
@@ -57,6 +62,22 @@ class MapSectorEncoder(JSONEncoder):
         if sector is None:
             return None
         return sector.sector_id
+    
+    def _get_map_size(self, map):
+        return (len(map), len(map[0])) # We will assume square maps
+    
+    def encode_landmap(self, map):
+        mapsz = self._get_map_size(map)
+        totalLen = (mapsz[0] * mapsz[1])
+        pos = 0
+
+        # Calculate 
+        encoded = [None] * totalLen
+        for row in map:
+            for tile in row:
+                encoded[pos] = str(tile[1])
+                pos = pos + 1
+        return "".join(encoded)
 
 class JsonEncodingDelegator(JSONEncoder):
 
