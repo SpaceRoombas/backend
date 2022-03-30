@@ -4,7 +4,7 @@ from tokenize import String
 from map import mapgeneration
 from uuid import uuid4
 
-class PlayerExistsError(ArgumentError):
+class PlayerExistsError(RuntimeError):
     pass
 
 class MapSector():   

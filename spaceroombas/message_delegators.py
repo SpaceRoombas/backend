@@ -9,7 +9,7 @@ class MessageDelegator:
 class MapUpdateRequestMessageDelegator(MessageDelegator):
 
     def delegate(self, messageWrapper, game_state, network):
-        map_sector = game_state.map.get_sector(0)
+        map_sector = game_state.map.get_sector('0,0')
         network.enque_message(messageWrapper.client, map_sector)
 
 class NewConnectionDelegator(MessageDelegator):
@@ -20,14 +20,15 @@ class NewConnectionDelegator(MessageDelegator):
 
         message = messageWrapper.message
 
-        # Send a map
-        map_sector = game_state.map.get_sector('0,0')
-        network.enque_message(messageWrapper.client, map_sector)
-
         try:
             game_state.add_player(message.client_id)
         except PlayerExistsError:
-            return # Any required logic to handle the case where a player exists
+            print("Got orphaned player: %s" % (message.client_id))
+        
+        # Send a map
+        map_sector = game_state.map.get_sector('0,0')
+        network.enque_message(messageWrapper.client, map_sector)
+        
 
 delegators = {
     MapUpdateRequestMessage:MapUpdateRequestMessageDelegator(),
