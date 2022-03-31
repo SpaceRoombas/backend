@@ -78,7 +78,6 @@ class SessionHandler(protocol.Protocol):
         self.__session_id = message.username
 
         # TODO Verify handshake signature
-        # TODO Check if session object exists already (reconnect)
 
         # Create session object or find existing
         if self.__session_id not in self.__factory.session_clients.keys():

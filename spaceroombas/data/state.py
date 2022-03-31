@@ -130,14 +130,26 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.robot_id = "r" + str(self.robot_count)
         PlayerRobot.robot_count += 1
         self.location = location
-        self.firmware = "while(true){move_north() move_east() move_south() move_west()}"  # TODO add current firmware/ function being run by robot
-        # note to whoever implements the above, make sure if firmware is changed interpreter is recreated.
-        self.interpreter = interpreter.Interpreter(self.firmware, {}, parser, transpiler)
+        self.firmware = None
+        self.parser = parser
+        self.transpiler = transpiler
+        self.interpreter = None
+
+        self.init_default_robot()
 
     def tick(self, fns):
         self.interpreter.set_fns(fns)
         self.interpreter.tick()
 
+    def init_default_robot(self):
+        self.set_firmware("while(true){move_north() move_east() move_south() move_west()}")
+
+    def init_interpreter(self):
+        self.interpreter = interpreter.Interpreter(self.firmware, {}, self.parser, self.transpiler)
+
+    def set_firmware(self, code):
+        self.firmware = code
+        self.init_interpreter()
 
 class PlayerState:
     def __init__(self, player_id, sector_id, parser, transpiler):
@@ -191,6 +203,14 @@ class GameState:
             print("robot id does not exist")
             return False
         return player.robots[robot_id]
+
+    def get_player_robots(self, player_id):
+        try:
+            player = self.players[player_id]
+        except KeyError:
+            print("Player '%s' doesnt exist" % (player_id))
+            return None
+        return player.robots
 
     # TODO make more efficent code for movement
     def move_robot_up(self, player_id, robot_id):
@@ -259,4 +279,4 @@ class GameState:
             print("tile was in use", wantedLocation)
 
 # TODO add logic for movement between sectors, check movement code to be neater
-# TODO logic for orphan client
+
