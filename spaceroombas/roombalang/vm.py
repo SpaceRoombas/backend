@@ -1,5 +1,7 @@
 import copy
 
+from .exceptions import LangException
+
 MAX_INSTRUCTIONS_PER_TICK = 100
 
 class Stack:
@@ -284,8 +286,9 @@ class VM:
                     break
 
             except Exception:
-                print(f"crash at ins: {self.pointer}\n {bytecode[self.pointer]}")
+                print(f"vm crash at ins: {self.pointer}\n {bytecode[self.pointer]}")
                 print(bytecode)
-                raise Exception
+
+                raise LangException(-1, "Vm Error!")
 
         return self.pointer
