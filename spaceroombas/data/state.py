@@ -195,13 +195,7 @@ class GameState:
             return True
 
     def get_robot(self, player_id, robot_id):
-        if self.players.get(player_id) is None:
-            print("player id doesnt exist:", player_id)
-            return False
         player = self.players[player_id]
-        if player.robots.get(robot_id) is None:
-            print("robot id does not exist")
-            return False
         return player.robots[robot_id]
 
     def get_player_robots(self, player_id):
@@ -212,71 +206,43 @@ class GameState:
             return None
         return player.robots
 
-    # TODO make more efficent code for movement
-    def move_robot_up(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
+    def move_player_robot(self, player_id, robot_id, dx=0, dy=0):
+        robot = None
+        try:
+            robot = self.get_robot(player_id, robot_id)
+        except KeyError:
+            print("Failed to fetch robot that doesnt exist")
+            return
+
+        # Check co-ord params and set current location (no change in that co-ord)
+        if dx == 0 and dy == 0:
+            print("Passed bad location")
             return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.y += 1
+
+        wantedLocation = EntityLocation(robot.location.sector, robot.location.x + dx, robot.location.y + dy)
+
         if self.map.check_tile_available(wantedLocation):
             self.map.update_walkable(robot.location, True)
-            robot.location.y += 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
+            robot.location = wantedLocation
+            self.map.update_walkable(wantedLocation, False)
+            print("Player \"%s\" Robot \"%s\" moved to: %s" % (player_id, robot_id, robot.location))
             return True
         else:
-            print("tile was in use", wantedLocation)
+            print("tile was in use: %s" % (wantedLocation))
+            return False
+
+    # Aliases for robot movement
+    def move_robot_up(self, player_id, robot_id):
+        return self.move_player_robot(player_id, robot_id, 1, 0)
 
     def move_robot_down(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
-            return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.y -= 1
-
-        if self.map.check_tile_available(wantedLocation):
-            self.map.update_walkable(robot.location, True)
-            robot.location.y -= 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
-            return True
-        else:
-            print("tile was in use", wantedLocation)
+        return self.move_player_robot(player_id, robot_id, -1, 0)
 
     def move_robot_left(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
-            return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.x -= 1
-        if self.map.check_tile_available(wantedLocation):
-            self.map.update_walkable(robot.location, True)
-            robot.location.x -= 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
-            return True
-        else:
-            print("tile was in use", wantedLocation)
+        return self.move_player_robot(player_id, robot_id, 0, -1)
 
     def move_robot_right(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
-            return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.x += 1
-        if self.map.check_tile_available(wantedLocation):
-            self.map.update_walkable(robot.location, True)
-            robot.location.x += 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
-            return True
-        else:
-            print("tile was in use", wantedLocation)
+        return self.move_player_robot(player_id, robot_id, 0, 1)
 
 # TODO add logic for movement between sectors, check movement code to be neater
 
