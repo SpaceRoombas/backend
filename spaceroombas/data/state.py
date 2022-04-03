@@ -1,5 +1,4 @@
-from argparse import ArgumentError
-import imp
+from queue import Queue
 from site import setcopyright
 from tokenize import String
 from map import mapgeneration
@@ -11,6 +10,16 @@ from roombalang import transpiler
 
 class PlayerExistsError(RuntimeError):
     pass
+
+# Various state change events
+
+class RobotMoveEvent():
+
+    def __init__(self, player_id, robot_id, old_location, new_location) -> None:
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.old = old_location
+        self.new = new_location
 
 
 class MapSector():
@@ -130,14 +139,26 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.robot_id = "r" + str(self.robot_count)
         PlayerRobot.robot_count += 1
         self.location = location
-        self.firmware = "while(true){move_north() move_east() move_south() move_west()}"  # TODO add current firmware/ function being run by robot
-        # note to whoever implements the above, make sure if firmware is changed interpreter is recreated.
-        self.interpreter = interpreter.Interpreter(self.firmware, {}, parser, transpiler)
+        self.firmware = None
+        self.parser = parser
+        self.transpiler = transpiler
+        self.interpreter = None
+
+        self.init_default_robot()
 
     def tick(self, fns):
         self.interpreter.set_fns(fns)
         self.interpreter.tick()
 
+    def init_default_robot(self):
+        self.set_firmware("while(true){move_north() move_east() move_south() move_west()}")
+
+    def init_interpreter(self):
+        self.interpreter = interpreter.Interpreter(self.firmware, {}, self.parser, self.transpiler)
+
+    def set_firmware(self, code):
+        self.firmware = code
+        self.init_interpreter()
 
 class PlayerState:
     def __init__(self, player_id, sector_id, parser, transpiler):
@@ -147,11 +168,22 @@ class PlayerState:
         self.player_firmware = None
         self.parser = parser
         self.transpiler = transpiler
+        self.change_events = Queue()
 
     def add_robot(self, location: EntityLocation):
         robot = PlayerRobot(self.player_id, location, self.parser, self.transpiler)
         self.robots[robot.robot_id] = robot
+    
+    def add_state_change_event(self, change_event):
+        self.change_events.put(change_event)
+    
+    def get_list_state_change_events(self):
+        events = list()
 
+        while not self.change_events.empty():
+            events.append(self.change_events.get())
+        
+        return events
 
 class GameState:
     def __init__(self):
@@ -183,80 +215,59 @@ class GameState:
             return True
 
     def get_robot(self, player_id, robot_id):
-        if self.players.get(player_id) is None:
-            print("player id doesnt exist:", player_id)
-            return False
         player = self.players[player_id]
-        if player.robots.get(robot_id) is None:
-            print("robot id does not exist")
-            return False
         return player.robots[robot_id]
 
-    # TODO make more efficent code for movement
-    def move_robot_up(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
+    def get_player_robots(self, player_id):
+        try:
+            player = self.players[player_id]
+        except KeyError:
+            print("Player '%s' doesnt exist" % (player_id))
+            return None
+        return player.robots
+
+    def move_player_robot(self, player_id, robot_id, dx=0, dy=0):
+        robot: PlayerRobot = None
+        player: PlayerState = None
+        try:
+            player = self.players[player_id]
+            robot = player.robots[robot_id]
+        except KeyError:
+            print("Failed to fetch player or robot that doesnt exist")
+            return
+
+        # Check co-ord params and set current location (no change in that co-ord)
+        if dx == 0 and dy == 0:
+            print("Passed bad location")
             return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.y += 1
+
+        wantedLocation = EntityLocation(robot.location.sector, robot.location.x + dx, robot.location.y + dy)
+
         if self.map.check_tile_available(wantedLocation):
+            # Add event
+            player.add_state_change_event(RobotMoveEvent(player_id, robot_id, robot.location, wantedLocation))
+
+            # Adjust state
             self.map.update_walkable(robot.location, True)
-            robot.location.y += 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
+            robot.location = wantedLocation
+            self.map.update_walkable(wantedLocation, False)
             return True
         else:
-            print("tile was in use", wantedLocation)
+            print("tile was in use: %s" % (wantedLocation))
+            return False
+
+    # Aliases for robot movement
+    def move_robot_up(self, player_id, robot_id):
+        return self.move_player_robot(player_id, robot_id, 1, 0)
 
     def move_robot_down(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
-            return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.y -= 1
-
-        if self.map.check_tile_available(wantedLocation):
-            self.map.update_walkable(robot.location, True)
-            robot.location.y -= 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
-            return True
-        else:
-            print("tile was in use", wantedLocation)
+        return self.move_player_robot(player_id, robot_id, -1, 0)
 
     def move_robot_left(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
-            return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.x -= 1
-        if self.map.check_tile_available(wantedLocation):
-            self.map.update_walkable(robot.location, True)
-            robot.location.x -= 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
-            return True
-        else:
-            print("tile was in use", wantedLocation)
+        return self.move_player_robot(player_id, robot_id, 0, -1)
 
     def move_robot_right(self, player_id, robot_id):
-        robot = self.get_robot(player_id, robot_id)
-        if robot == False:
-            print("couldn't find robot")
-            return False
-        wantedLocation = EntityLocation(robot.location.sector, robot.location.x, robot.location.y)
-        wantedLocation.x += 1
-        if self.map.check_tile_available(wantedLocation):
-            self.map.update_walkable(robot.location, True)
-            robot.location.x += 1
-            self.map.update_walkable(robot.location, False)
-            print("robot moved to ", robot.location)
-            return True
-        else:
-            print("tile was in use", wantedLocation)
+        return self.move_player_robot(player_id, robot_id, 0, 1)
 
 # TODO add logic for movement between sectors, check movement code to be neater
-# TODO logic for orphan client
+

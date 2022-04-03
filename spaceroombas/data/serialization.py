@@ -1,8 +1,15 @@
 from .state import MapSector
 from . import messages
-from .messages import CarrierPigeon, Handshake, PlayerDetails
+from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage
 
 from json import JSONEncoder, dumps as json_string, loads as load_json
+
+# ---------------------------
+#
+# Payload Mappers
+#
+# ---------------------------
+
 
 class PayloadMapper():
     def map(self, dict):
@@ -18,10 +25,18 @@ class PlayerDetailsMapper(PayloadMapper):
         return PlayerDetails(dict['player_name'], dict['server_address'], 
         dict['token_millis'], dict['match_end_millis'], dict['signature'])
 
-carrier_mappers = {
-    'handshake':HandshakePayloadMapper(),
-    'player_details':PlayerDetailsMapper()
-}
+class PlayerFirmwareChangeMapper(PayloadMapper):
+
+    def map(self, dict):
+        return PlayerFirmwareChange(dict['code'], dict['player_id'], dict['robot_id'])
+
+
+# ---------------------------
+#
+# JSON Encoders
+#
+# ---------------------------
+
 
 class CarrierPigeonEncoder(JSONEncoder):
     def default(self, obj):
@@ -41,6 +56,14 @@ class HandshakeEncoder(JSONEncoder):
     
     def encode(self, o) -> str:
         return super().encode(o)
+
+class PlayerFirmwareChangeEncoder(JSONEncoder):
+        def default(self, obj):
+            return {
+                "code":obj.code,
+                "player_id":obj.player_id,
+                "robot_id":obj.robot_id
+            }
 
 class MapSectorEncoder(JSONEncoder):
     def default(self, obj):
@@ -79,6 +102,15 @@ class MapSectorEncoder(JSONEncoder):
                 pos = pos + 1
         return "".join(encoded)
 
+class RobotMoveMessageEncoder(JSONEncoder):
+        def default(self, obj):
+            return {
+                "player_id":obj.player_id,
+                "robot_id":obj.robot_id,
+                "x":obj.x,
+                "y":obj.y
+            }
+
 class JsonEncodingDelegator(JSONEncoder):
 
     def __init__(self, encoders) -> None:
@@ -100,15 +132,36 @@ class JsonEncodingDelegator(JSONEncoder):
         objType = type(mObj)
         try:
             encoder = self.encoders[objType]
-            return encoder(*self.args, **self.kwargs).default(mObj)
+            return encoder(*self.args, **self.kwargs).default(mObj) # This could be slow for high-volume messages
         except KeyError:
             return self.fallbackEncoder.default(mObj)
+
+# ---------------------------
+#
+# Lookup Maps
+#
+# ---------------------------
+
+carrier_mappers = {
+    'handshake':HandshakePayloadMapper(),
+    'player_details':PlayerDetailsMapper(),
+    'firmware_change':PlayerFirmwareChangeMapper(),
+}
 
 obj_encoders = {
             CarrierPigeon:CarrierPigeonEncoder,
             messages.Handshake:HandshakeEncoder,
-            MapSector:MapSectorEncoder
+            MapSector:MapSectorEncoder,
+            PlayerFirmwareChange:PlayerFirmwareChangeEncoder,
+            PlayerRobotMoveMessage:RobotMoveMessageEncoder
 }
+
+
+# ---------------------------
+#
+# Logic
+#
+# ---------------------------
 
 encodingDelegator = JsonEncodingDelegator(obj_encoders)
 

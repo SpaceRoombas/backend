@@ -23,6 +23,14 @@ class PlayerDetails():
         self.match_expire = match_expire
         self.signature = signature
 
+class PlayerFirmwareChange():
+
+    def __init__(self, code, player_id, robot_id=None):
+        self.code = code
+        self.player_id = player_id
+        self.robot_id = robot_id
+        pass
+
 class MapUpdateRequestMessage():
 
     def __init__(self, chunk="all") -> None:
@@ -32,3 +40,11 @@ class MapUpdateRequestMessage():
 class NewConnectionMessage():
     def __init__(self, client_id) -> None:
         self.client_id = client_id
+
+class PlayerRobotMoveMessage():
+
+    def __init__(self, player_id, robot_id, x, y):
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.x = x
+        self.y = y

@@ -9,7 +9,6 @@ from roombalang.exceptions import LangException
 
 import message_delegators
 
-
 def game_loop(game_state, network):
     client_messages = network.fetch_messages()
 
@@ -33,6 +32,9 @@ def game_loop(game_state, network):
             bot.tick(fns)
         except LangException as e:
                 print(f"Player {bot.owner} code had exception: {e}!")
+                
+    # Send out messages to clients
+    message_delegators.delegate_server_messages(game_state, network)
 
 network = client_networking.RoombaNetwork(9001)
 game_state = GameState()
