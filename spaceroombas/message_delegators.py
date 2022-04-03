@@ -1,5 +1,12 @@
-from data.messages import MapUpdateRequestMessage, NewConnectionMessage, PlayerFirmwareChange
-from data.state import PlayerExistsError
+from typing import List
+from data.messages import MapUpdateRequestMessage, NewConnectionMessage, PlayerFirmwareChange, PlayerRobotMoveMessage
+from data.state import GameState, PlayerExistsError, RobotMoveEvent
+
+# ---------------------------
+#
+# Client Message Delegation
+#
+# ---------------------------
 
 class MessageDelegator:
 
@@ -66,3 +73,48 @@ def delegate_client_message(messageWrapper, game_state, network):
         return
 
     delegator.delegate(messageWrapper, game_state, network)
+
+
+# ---------------------------
+#
+# Server Message Delegation
+#
+# ---------------------------
+
+
+class RobotMoveEventDelegator():
+    def delegate(self, network, event):
+        network_message = PlayerRobotMoveMessage(event.player_id, event.robot_id, event.new.x, event.new.y)
+        print("Player \"%s\" Robot \"%s\" moved to: %s from: %s" 
+        % (
+        event.player_id, 
+        event.robot_id, 
+        event.new, event.old
+        ))
+
+        network.enque_message(None, network_message)
+
+
+event_delegators = {
+    RobotMoveEvent:RobotMoveEventDelegator()
+}
+
+def delegate_state_changes(events: list, network):
+    delegator = None
+    for event in events:
+        event_type = type(event)
+        try:
+            delegator = event_delegators[event_type]
+            delegator.delegate(network, event)
+        except KeyError:
+            print("Cannot send this message out yet")
+
+def delegate_server_messages(game_state: GameState, network):
+    state_changes = list()
+    
+    # Check for player state events
+    for player in game_state.players.values():
+        state_changes.extend(player.get_list_state_change_events())
+    
+    if len(state_changes) > 0:
+        delegate_state_changes(state_changes, network)

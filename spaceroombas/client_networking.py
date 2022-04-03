@@ -1,4 +1,4 @@
-from queue import LifoQueue, Empty
+from queue import Queue, Empty
 from twisted.internet.interfaces import IAddress
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import TCP4ServerEndpoint
@@ -25,8 +25,8 @@ class ClientMessageWrapper():
 
 class SessionClient():
     def __init__(self, id, handler) -> None:
-        self.recieve_queue = LifoQueue()
-        self.send_queue = LifoQueue()
+        self.recieve_queue = Queue()
+        self.send_queue = Queue()
         self.id = id # this may be the screen name, or a hash of the screen name
         self.username = id
         self.handler = handler
@@ -180,7 +180,7 @@ class RoombaNetwork():
                 print("Object couldn't be packaged and something really bad happened")
                 return
 
-            if clientid == "*": # This message gets put into *ALL* clients
+            if clientid is None: # This message gets put into *ALL* clients
                 for k, v in self.factory.session_clients.items():
                     v.send_queue.put(packed_message, True, 0.5)
             else:

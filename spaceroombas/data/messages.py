@@ -40,3 +40,11 @@ class MapUpdateRequestMessage():
 class NewConnectionMessage():
     def __init__(self, client_id) -> None:
         self.client_id = client_id
+
+class PlayerRobotMoveMessage():
+
+    def __init__(self, player_id, robot_id, x, y):
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.x = x
+        self.y = y

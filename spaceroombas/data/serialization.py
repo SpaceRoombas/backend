@@ -1,6 +1,6 @@
 from .state import MapSector
 from . import messages
-from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange
+from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage
 
 from json import JSONEncoder, dumps as json_string, loads as load_json
 
@@ -102,6 +102,15 @@ class MapSectorEncoder(JSONEncoder):
                 pos = pos + 1
         return "".join(encoded)
 
+class RobotMoveMessageEncoder(JSONEncoder):
+        def default(self, obj):
+            return {
+                "player_id":obj.player_id,
+                "robot_id":obj.robot_id,
+                "x":obj.x,
+                "y":obj.y
+            }
+
 class JsonEncodingDelegator(JSONEncoder):
 
     def __init__(self, encoders) -> None:
@@ -123,7 +132,7 @@ class JsonEncodingDelegator(JSONEncoder):
         objType = type(mObj)
         try:
             encoder = self.encoders[objType]
-            return encoder(*self.args, **self.kwargs).default(mObj)
+            return encoder(*self.args, **self.kwargs).default(mObj) # This could be slow for high-volume messages
         except KeyError:
             return self.fallbackEncoder.default(mObj)
 
@@ -143,7 +152,8 @@ obj_encoders = {
             CarrierPigeon:CarrierPigeonEncoder,
             messages.Handshake:HandshakeEncoder,
             MapSector:MapSectorEncoder,
-            PlayerFirmwareChange:PlayerFirmwareChangeEncoder
+            PlayerFirmwareChange:PlayerFirmwareChangeEncoder,
+            PlayerRobotMoveMessage:RobotMoveMessageEncoder
 }
 
 

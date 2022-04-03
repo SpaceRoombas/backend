@@ -1,5 +1,4 @@
-from argparse import ArgumentError
-import imp
+from queue import Queue
 from site import setcopyright
 from tokenize import String
 from map import mapgeneration
@@ -11,6 +10,16 @@ from roombalang import transpiler
 
 class PlayerExistsError(RuntimeError):
     pass
+
+# Various state change events
+
+class RobotMoveEvent():
+
+    def __init__(self, player_id, robot_id, old_location, new_location) -> None:
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.old = old_location
+        self.new = new_location
 
 
 class MapSector():
@@ -159,11 +168,22 @@ class PlayerState:
         self.player_firmware = None
         self.parser = parser
         self.transpiler = transpiler
+        self.change_events = Queue()
 
     def add_robot(self, location: EntityLocation):
         robot = PlayerRobot(self.player_id, location, self.parser, self.transpiler)
         self.robots[robot.robot_id] = robot
+    
+    def add_state_change_event(self, change_event):
+        self.change_events.put(change_event)
+    
+    def get_list_state_change_events(self):
+        events = list()
 
+        while not self.change_events.empty():
+            events.append(self.change_events.get())
+        
+        return events
 
 class GameState:
     def __init__(self):
@@ -207,11 +227,13 @@ class GameState:
         return player.robots
 
     def move_player_robot(self, player_id, robot_id, dx=0, dy=0):
-        robot = None
+        robot: PlayerRobot = None
+        player: PlayerState = None
         try:
-            robot = self.get_robot(player_id, robot_id)
+            player = self.players[player_id]
+            robot = player.robots[robot_id]
         except KeyError:
-            print("Failed to fetch robot that doesnt exist")
+            print("Failed to fetch player or robot that doesnt exist")
             return
 
         # Check co-ord params and set current location (no change in that co-ord)
@@ -222,10 +244,13 @@ class GameState:
         wantedLocation = EntityLocation(robot.location.sector, robot.location.x + dx, robot.location.y + dy)
 
         if self.map.check_tile_available(wantedLocation):
+            # Add event
+            player.add_state_change_event(RobotMoveEvent(player_id, robot_id, robot.location, wantedLocation))
+
+            # Adjust state
             self.map.update_walkable(robot.location, True)
             robot.location = wantedLocation
             self.map.update_walkable(wantedLocation, False)
-            print("Player \"%s\" Robot \"%s\" moved to: %s" % (player_id, robot_id, robot.location))
             return True
         else:
             print("tile was in use: %s" % (wantedLocation))
