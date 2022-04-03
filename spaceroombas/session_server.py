@@ -5,6 +5,7 @@ from twisted.internet.task import LoopingCall
 from roombalang.parser import Parser
 from roombalang.transpiler import Transpiler
 from roombalang.interpreter import Interpreter
+from roombalang.exceptions import LangException
 
 import message_delegators
 
@@ -30,14 +31,13 @@ def game_loop(game_state, network):
         fns = {"move_north": up, "move_south": down, "move_west": left, "move_east": right}
         try:
             bot.tick(fns)
-        except Exception:
-            print(f"Player {bot.owner} code had exception: {Exception}!")
-
+        except LangException as e:
+                print(f"Player {bot.owner} code had exception: {e}!")
 
 network = client_networking.RoombaNetwork(9001)
 game_state = GameState()
 
-# game_state.add_player(0)
+#game_state.add_player(0)
 
 print("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
