@@ -9,6 +9,9 @@ from roombalang.exceptions import LangException
 
 import message_delegators
 
+GAME_LOOP_DELTA = 0.5
+NETWORK_UPDATE_DELTA = 0.1
+
 def game_loop(game_state, network):
     client_messages = network.fetch_messages()
 
@@ -36,14 +39,12 @@ def game_loop(game_state, network):
     # Send out messages to clients
     message_delegators.delegate_server_messages(game_state, network)
 
-network = client_networking.RoombaNetwork(9001)
+network = client_networking.RoombaNetwork(9001, NETWORK_UPDATE_DELTA)
 game_state = GameState()
-
-#game_state.add_player(0)
 
 print("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
-game_looper.start(0.5)
+game_looper.start(GAME_LOOP_DELTA)
 
 print("Bringing up network")
 network.start()

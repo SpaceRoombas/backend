@@ -94,7 +94,7 @@ class SessionHandler(protocol.Protocol):
         self.send_handshake_response(self.__session_id, message.signature, Handshake.STATUS_OK)
 
         # Let game state know that a player is joined into the game
-        self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), True, 0.5)
+        self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), False)
 
     def send_handshake_response(self, username, signature, status):
         hnd = Handshake(username, signature, status)
@@ -118,7 +118,7 @@ class SessionHandler(protocol.Protocol):
         # Unpack message and enque
         try:
             message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
-            self.session_queue().put(message_wrapper, True, 0.5)
+            self.session_queue().put(message_wrapper, False)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
 
@@ -139,9 +139,10 @@ class SessionHandlerFactory(protocol.Factory):
 
 class RoombaNetwork():
 
-    def __init__(self, port=9001) -> None:
+    def __init__(self, port=9001, update_delta=0.3) -> None:
         self.factory = None
         self.__port = port
+        self.delta = update_delta
         pass
 
     def __dispatch_client_messages(self):
@@ -182,11 +183,11 @@ class RoombaNetwork():
 
             if clientid is None: # This message gets put into *ALL* clients
                 for k, v in self.factory.session_clients.items():
-                    v.send_queue.put(packed_message, True, 0.5)
+                    v.send_queue.put(packed_message, False)
             else:
                 try:
                     client = self.factory.session_clients[clientid]
-                    client.send_queue.put(packed_message, True, 0.5)
+                    client.send_queue.put(packed_message, False)
                 except KeyError:
                     print("Client does not exist")
                     return
@@ -202,7 +203,7 @@ class RoombaNetwork():
 
         print("Starting server on %d" % (self.__port))
         
-        send_looper.start(0.5)
+        send_looper.start(self.delta)
         server.listen(self.factory)
         reactor.run()
 
