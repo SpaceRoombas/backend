@@ -119,7 +119,18 @@ class MapState():
         current_sector = self.get_sector(location.sector.sector_id)
         current_sector.land_map[location.x][location.y][0] = walkable
 
+    def violates_map_bounds(self, x, y):
+        # TODO this is hard coded, we need to update this to reflect actual map bounds
+        xMax = 49
+        yMax = 49
+
+        return x > xMax or y > yMax or y < 0 or x < 0
+
     def check_tile_available(self, location: EntityLocation):
+
+        if self.violates_map_bounds(location.x, location.y):
+            return False
+
         current_sector = self.get_sector(location.sector.sector_id)
         return current_sector.land_map[location.x][location.y][0]
 
@@ -258,10 +269,10 @@ class GameState:
 
     # Aliases for robot movement
     def move_robot_up(self, player_id, robot_id):
-        return self.move_player_robot(player_id, robot_id, 0, 1)
+        return self.move_player_robot(player_id, robot_id, 0, -1)
 
     def move_robot_down(self, player_id, robot_id):
-        return self.move_player_robot(player_id, robot_id, 0, -1)
+        return self.move_player_robot(player_id, robot_id, 0, 1)
 
     def move_robot_left(self, player_id, robot_id):
         return self.move_player_robot(player_id, robot_id, -1, 0)

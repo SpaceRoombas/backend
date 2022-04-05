@@ -43,7 +43,7 @@ game_state = GameState()
 
 print("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
-game_looper.start(0.2)
+game_looper.start(0.5)
 
 print("Bringing up network")
 network.start()
