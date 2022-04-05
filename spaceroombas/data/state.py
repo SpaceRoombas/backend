@@ -258,6 +258,18 @@ class GameState:
 
     # Aliases for robot movement
     def move_robot_up(self, player_id, robot_id):
+<<<<<<< HEAD
+        return self.move_player_robot(player_id, robot_id, 0, 1)
+
+    def move_robot_down(self, player_id, robot_id):
+        return self.move_player_robot(player_id, robot_id, 0, -1)
+
+    def move_robot_left(self, player_id, robot_id):
+        return self.move_player_robot(player_id, robot_id, -1, 0)
+
+    def move_robot_right(self, player_id, robot_id):
+        return self.move_player_robot(player_id, robot_id, 1, 0)
+=======
         return self.move_player_robot(player_id, robot_id, 1, 0)
 
     def move_robot_down(self, player_id, robot_id):
@@ -268,6 +280,7 @@ class GameState:
 
     def move_robot_right(self, player_id, robot_id):
         return self.move_player_robot(player_id, robot_id, 0, 1)
+>>>>>>> 7f897d13918cc271ebd3be58f82c54c781ea9eee
 
 # TODO add logic for movement between sectors, check movement code to be neater
 
