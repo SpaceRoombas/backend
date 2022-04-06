@@ -12,7 +12,7 @@ import message_delegators
 GAME_LOOP_DELTA = 0.3
 NETWORK_UPDATE_DELTA = 0.1
 
-def game_loop(game_state, network):
+def game_loop(game_state: GameState, network):
     client_messages = network.fetch_messages()
 
     # Delegate all messages and apply to game state

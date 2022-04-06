@@ -1,4 +1,4 @@
-from .state import MapSector
+from .state import MapSector, PlayerRobot, EntityLocation
 from . import messages
 from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage
 
@@ -111,6 +111,30 @@ class RobotMoveMessageEncoder(JSONEncoder):
                 "y":obj.y
             }
 
+class RobotListingEncoder(JSONEncoder):
+        def default(self, obj: messages.RobotListingMessage):
+            return {
+                "num_robots":obj.num_bots,
+                "robots":obj.robots,
+            }
+
+class EntityLocationEncoder(JSONEncoder):
+        def default(self, obj: EntityLocation):
+            return {
+                "sector_id":obj.sector.sector_id,
+                "x":obj.x,
+                "y":obj.y
+            }
+
+class PlayerRobotEncoder(JSONEncoder):
+        def default(self, obj: PlayerRobot):
+            return {
+                "owner":obj.owner,
+                "robot_id":obj.robot_id,
+                "location":obj.location,
+                "firmware":obj.firmware,
+            }
+
 class JsonEncodingDelegator(JSONEncoder):
 
     def __init__(self, encoders) -> None:
@@ -153,7 +177,10 @@ obj_encoders = {
             messages.Handshake:HandshakeEncoder,
             MapSector:MapSectorEncoder,
             PlayerFirmwareChange:PlayerFirmwareChangeEncoder,
-            PlayerRobotMoveMessage:RobotMoveMessageEncoder
+            PlayerRobotMoveMessage:RobotMoveMessageEncoder,
+            messages.RobotListingMessage:RobotListingEncoder,
+            PlayerRobot:PlayerRobotEncoder,
+            EntityLocation:EntityLocationEncoder,
 }
 
 
