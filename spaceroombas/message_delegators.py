@@ -1,5 +1,5 @@
 from typing import List
-from data.messages import MapUpdateRequestMessage, NewConnectionMessage, PlayerFirmwareChange, PlayerRobotMoveMessage
+from data import messages
 from data.state import GameState, PlayerExistsError, RobotMoveEvent
 
 # ---------------------------
@@ -21,21 +21,30 @@ class MapUpdateRequestMessageDelegator(MessageDelegator):
 
 class NewConnectionDelegator(MessageDelegator):
 
-    def delegate(self, messageWrapper, game_state, network):
+    def delegate(self, messageWrapper, game_state: GameState, network):
         # Verify that we have a player in game state
         # Send map for player location
 
         message = messageWrapper.message
+        robots = None
 
         try:
             game_state.add_player(message.client_id)
         except PlayerExistsError:
-            # TODO send down current code for EACH robot registered to player
             print("Got orphaned player: %s" % (message.client_id))
-        
+            # Send robots. This happens on new players, because the creation
+            # of their first robot will trigger a list send.
+            # In which, we want EVERYONE to know
+            robots = game_state.get_all_robots()
+            if len(robots) > 0:
+                network.enque_message(messageWrapper.client, 
+                messages.RobotListingMessage(robots))
+
         # Send a map
         map_sector = game_state.map.get_sector('0,0')
         network.enque_message(messageWrapper.client, map_sector)
+
+
 
 class PlayerFirmwareChangeDelegator(MessageDelegator):
 
@@ -58,9 +67,9 @@ class PlayerFirmwareChangeDelegator(MessageDelegator):
             
 
 delegators = {
-    MapUpdateRequestMessage:MapUpdateRequestMessageDelegator(),
-    NewConnectionMessage:NewConnectionDelegator(),
-    PlayerFirmwareChange:PlayerFirmwareChangeDelegator(),
+    messages.MapUpdateRequestMessage:MapUpdateRequestMessageDelegator(),
+    messages.NewConnectionMessage:NewConnectionDelegator(),
+    messages.PlayerFirmwareChange:PlayerFirmwareChangeDelegator(),
 }
 
 def delegate_client_message(messageWrapper, game_state, network):
@@ -84,7 +93,7 @@ def delegate_client_message(messageWrapper, game_state, network):
 
 class RobotMoveEventDelegator():
     def delegate(self, network, event):
-        network_message = PlayerRobotMoveMessage(event.player_id, event.robot_id, event.new.x, event.new.y)
+        network_message = messages.PlayerRobotMoveMessage(event.player_id, event.robot_id, event.new.x, event.new.y)
         print("Player \"%s\" Robot \"%s\" moved to: %s from: %s" 
         % (
         event.player_id, 
@@ -109,8 +118,17 @@ def delegate_state_changes(events: list, network):
         except KeyError:
             print("Cannot send this message out yet")
 
+def delegate_notify_new_robots(game_state: GameState, network):
+    robots = game_state.check_for_new_robots()
+
+    if robots is not None:
+        network.enque_message(None, messages.RobotListingMessage(robots))
+
 def delegate_server_messages(game_state: GameState, network):
     state_changes = list()
+
+    # Notify on new robots
+    delegate_notify_new_robots(game_state, network)
     
     # Check for player state events
     for player in game_state.players.values():

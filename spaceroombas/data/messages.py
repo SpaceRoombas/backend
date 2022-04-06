@@ -48,3 +48,9 @@ class PlayerRobotMoveMessage():
         self.robot_id = robot_id
         self.x = x
         self.y = y
+
+class RobotListingMessage():
+
+    def __init__(self, bots=[]) -> None:
+        self.num_bots = len(bots)
+        self.robots = bots

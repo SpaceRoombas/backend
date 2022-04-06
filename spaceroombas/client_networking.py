@@ -9,6 +9,9 @@ from data import serialization
 
 from data.messages import NewConnectionMessage
 
+QUEUE_TIMEOUT = 0.3
+QUEUE_FLUSH_RATE = 1 
+
 immediates = [
     'invalid',
     'handshake'
@@ -30,10 +33,22 @@ class SessionClient():
         self.id = id # this may be the screen name, or a hash of the screen name
         self.username = id
         self.handler = handler
-    
+
+    def tick_flush_send_queue(self, flush_max=1):
+        msg = None
+        encoded = None
+        try:
+            while flush_max > 0:
+                flush_max = flush_max - 1
+                msg = self.send_queue.get(True, QUEUE_TIMEOUT)
+                encoded = bytes(msg, 'utf-8')
+                self.handler.send_data(encoded)
+        except Empty: 
+            pass # send queue empty
+
     def tick_send_message(self):
         try:
-            msg = self.send_queue.get(False)
+            msg = self.send_queue.get(True, QUEUE_TIMEOUT)
             encoded = bytes(msg, 'utf-8')
             self.handler.send_data(encoded)
         except Empty:
@@ -94,7 +109,7 @@ class SessionHandler(protocol.Protocol):
         self.send_handshake_response(self.__session_id, message.signature, Handshake.STATUS_OK)
 
         # Let game state know that a player is joined into the game
-        self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), True, 0.5)
+        self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), False)
 
     def send_handshake_response(self, username, signature, status):
         hnd = Handshake(username, signature, status)
@@ -118,7 +133,7 @@ class SessionHandler(protocol.Protocol):
         # Unpack message and enque
         try:
             message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
-            self.session_queue().put(message_wrapper, True, 0.5)
+            self.session_queue().put(message_wrapper, True, QUEUE_TIMEOUT)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
 
@@ -139,9 +154,10 @@ class SessionHandlerFactory(protocol.Factory):
 
 class RoombaNetwork():
 
-    def __init__(self, port=9001) -> None:
+    def __init__(self, port=9001, update_delta=0.3) -> None:
         self.factory = None
         self.__port = port
+        self.delta = update_delta
         pass
 
     def __dispatch_client_messages(self):
@@ -149,7 +165,7 @@ class RoombaNetwork():
             return
 
         for k, v in self.factory.session_clients.items():
-            v.tick_send_message()
+            v.tick_flush_send_queue(QUEUE_FLUSH_RATE)
 
 
     def fetch_messages(self):
@@ -159,7 +175,7 @@ class RoombaNetwork():
             for k, v in self.factory.session_clients.items():
                 queue = v.recieve_queue
                 try:
-                    messages.append(queue.get(False))  # Head of each queue is inserted into messages list
+                    messages.append(queue.get(True, QUEUE_TIMEOUT))  # Head of each queue is inserted into messages list
                 except Empty:
                     continue # Queue is empty, continue on silently
         return messages
@@ -182,11 +198,11 @@ class RoombaNetwork():
 
             if clientid is None: # This message gets put into *ALL* clients
                 for k, v in self.factory.session_clients.items():
-                    v.send_queue.put(packed_message, True, 0.5)
+                    v.send_queue.put(packed_message, False)
             else:
                 try:
                     client = self.factory.session_clients[clientid]
-                    client.send_queue.put(packed_message, True, 0.5)
+                    client.send_queue.put(packed_message, False)
                 except KeyError:
                     print("Client does not exist")
                     return
@@ -202,7 +218,7 @@ class RoombaNetwork():
 
         print("Starting server on %d" % (self.__port))
         
-        send_looper.start(0.5)
+        send_looper.start(self.delta)
         server.listen(self.factory)
         reactor.run()
 

@@ -1,3 +1,4 @@
+from enum import Flag
 from queue import Queue
 from site import setcopyright
 from tokenize import String
@@ -40,11 +41,12 @@ class MapSector():
 
 
 class EntityLocation():
-    """
-    sector is the id of the sector that the entity is located
-    """
 
     def __init__(self, sector, x, y) -> None:
+        # TODO This references the whole sector object, when really it should be a sector id
+        # Consider setting this as sector ID. The rest of the logic that uses this location class
+        # Assumes this will return a MapSector.
+        # When updating this, make sure to adjust EntityLocationEncoder in serialization.py
         self.sector = sector
         self.x = x
         self.y = y
@@ -202,6 +204,7 @@ class GameState:
         self.players = dict()
         self.parser = parser.Parser()
         self.transpiler = transpiler.Transpiler()
+        self.NEW_ROBOT_FLAG = False
 
     def add_player(self, player_id):
         sector = self.map.get_sector(
@@ -223,6 +226,7 @@ class GameState:
         else:
             self.players[player_id].add_robot(location)
             self.map.update_walkable(location, False)
+            self.NEW_ROBOT_FLAG = True
             return True
 
     def get_robot(self, player_id, robot_id):
@@ -236,6 +240,20 @@ class GameState:
             print("Player '%s' doesnt exist" % (player_id))
             return None
         return player.robots
+    
+    def check_for_new_robots(self):
+        if self.NEW_ROBOT_FLAG == True:
+            self.NEW_ROBOT_FLAG = False
+            return self.get_all_robots()
+
+    def get_all_robots(self):
+        bots = [None] * PlayerRobot.robot_count
+        i = 0
+        for player in self.players.values():
+            for robot in player.robots.values():
+                bots[i] = robot
+                i += 1
+        return bots
 
     def move_player_robot(self, player_id, robot_id, dx=0, dy=0):
         robot: PlayerRobot = None
