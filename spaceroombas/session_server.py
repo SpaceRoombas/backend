@@ -9,7 +9,7 @@ from roombalang.exceptions import LangException
 
 import message_delegators
 
-GAME_LOOP_DELTA = 0.5
+GAME_LOOP_DELTA = 0.3
 NETWORK_UPDATE_DELTA = 0.1
 
 def game_loop(game_state, network):

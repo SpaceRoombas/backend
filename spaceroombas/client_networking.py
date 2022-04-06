@@ -9,6 +9,9 @@ from data import serialization
 
 from data.messages import NewConnectionMessage
 
+QUEUE_TIMEOUT = 0.3
+QUEUE_FLUSH_RATE = 1 
+
 immediates = [
     'invalid',
     'handshake'
@@ -30,10 +33,22 @@ class SessionClient():
         self.id = id # this may be the screen name, or a hash of the screen name
         self.username = id
         self.handler = handler
-    
+
+    def tick_flush_send_queue(self, flush_max=1):
+        msg = None
+        encoded = None
+        try:
+            while flush_max > 0:
+                flush_max = flush_max - 1
+                msg = self.send_queue.get(True, QUEUE_TIMEOUT)
+                encoded = bytes(msg, 'utf-8')
+                self.handler.send_data(encoded)
+        except Empty: 
+            pass # send queue empty
+
     def tick_send_message(self):
         try:
-            msg = self.send_queue.get(False)
+            msg = self.send_queue.get(True, QUEUE_TIMEOUT)
             encoded = bytes(msg, 'utf-8')
             self.handler.send_data(encoded)
         except Empty:
@@ -118,7 +133,7 @@ class SessionHandler(protocol.Protocol):
         # Unpack message and enque
         try:
             message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
-            self.session_queue().put(message_wrapper, False)
+            self.session_queue().put(message_wrapper, True, QUEUE_TIMEOUT)
         except KeyError:
             print("Session is not ready to accept messages (must complete handshake)")
 
@@ -150,7 +165,7 @@ class RoombaNetwork():
             return
 
         for k, v in self.factory.session_clients.items():
-            v.tick_send_message()
+            v.tick_flush_send_queue(QUEUE_FLUSH_RATE)
 
 
     def fetch_messages(self):
@@ -160,7 +175,7 @@ class RoombaNetwork():
             for k, v in self.factory.session_clients.items():
                 queue = v.recieve_queue
                 try:
-                    messages.append(queue.get(False))  # Head of each queue is inserted into messages list
+                    messages.append(queue.get(True, QUEUE_TIMEOUT))  # Head of each queue is inserted into messages list
                 except Empty:
                     continue # Queue is empty, continue on silently
         return messages
