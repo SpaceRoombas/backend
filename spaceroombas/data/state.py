@@ -7,7 +7,7 @@ from uuid import uuid4
 from roombalang import interpreter
 from roombalang import parser
 from roombalang import transpiler
-
+from .util import create_interpreter_function_bindings
 
 class PlayerExistsError(RuntimeError):
     pass
@@ -156,22 +156,32 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.parser = parser
         self.transpiler = transpiler
         self.interpreter = None
+        self.bound_functions = {}
 
         self.init_default_robot()
 
-    def tick(self, fns):
-        self.interpreter.set_fns(fns)
-        self.interpreter.tick()
+    def tick(self):
+        if self.interpreter is not None:
+            self.interpreter.tick()
 
     def init_default_robot(self):
         self.set_firmware("while(true){move_north() move_east() move_south() move_west()}")
 
     def init_interpreter(self):
-        self.interpreter = interpreter.Interpreter(self.firmware, {}, self.parser, self.transpiler)
+        self.interpreter = interpreter.Interpreter(self.firmware, self.bound_functions, self.parser, self.transpiler)
 
     def set_firmware(self, code):
         self.firmware = code
         self.init_interpreter()
+    
+    def set_bound_functions(self, fns: dict):
+        if type(fns) != dict:
+            self.bound_functions = {}
+            return
+
+        self.bound_functions = fns
+        if self.interpreter is not None:
+            self.interpreter.set_fns(self.bound_functions)
 
 class PlayerState:
     def __init__(self, player_id, sector_id, parser, transpiler):
@@ -186,6 +196,7 @@ class PlayerState:
     def add_robot(self, location: EntityLocation):
         robot = PlayerRobot(self.player_id, location, self.parser, self.transpiler)
         self.robots[robot.robot_id] = robot
+        return robot
     
     def add_state_change_event(self, change_event):
         self.change_events.put(change_event)
@@ -220,14 +231,20 @@ class GameState:
         self.add_robot(player_id, EntityLocation(sector, x, y))
 
     def add_robot(self, player_id, location: EntityLocation):  # TODO set up so the robot is spawned in valid location
+        robot = None
         if self.players.get(player_id) is None:
             print("invalid player id to add robot to")
             return False
         else:
-            self.players[player_id].add_robot(location)
+            robot = self.players[player_id].add_robot(location)
+            self.__bind_robot_functions(robot)
             self.map.update_walkable(location, False)
             self.NEW_ROBOT_FLAG = True
             return True
+    
+    def __bind_robot_functions(self, robot: PlayerRobot):
+        fns = create_interpreter_function_bindings(self, robot)
+        robot.set_bound_functions(fns)
 
     def get_robot(self, player_id, robot_id):
         player = self.players[player_id]

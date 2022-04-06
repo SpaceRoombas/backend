@@ -12,29 +12,25 @@ import message_delegators
 GAME_LOOP_DELTA = 0.3
 NETWORK_UPDATE_DELTA = 0.1
 
+def tick_bots(game_state: GameState):
+    bots = game_state.get_all_robots()
+    shuffle(bots)
+
+    for bot in bots:
+        try:
+            bot.tick()
+        except LangException as e:
+                print(f"Player {bot.owner} code had exception: {e}!")
+
 def game_loop(game_state: GameState, network):
     client_messages = network.fetch_messages()
 
     # Delegate all messages and apply to game state
     for client_message in client_messages:
         message_delegators.delegate_client_message(client_message, game_state, network)
-
-    bots = []
-    for player in game_state.players.values():
-        bots += player.robots.values()
-
-    shuffle(bots)
-
-    for bot in bots:
-        up = (lambda args: game_state.move_robot_up(bot.owner, bot.robot_id), 0)
-        down = (lambda args: game_state.move_robot_down(bot.owner, bot.robot_id), 0)
-        left = (lambda args: game_state.move_robot_left(bot.owner, bot.robot_id), 0)
-        right = (lambda args: game_state.move_robot_right(bot.owner, bot.robot_id), 0)
-        fns = {"move_north": up, "move_south": down, "move_west": left, "move_east": right}
-        try:
-            bot.tick(fns)
-        except LangException as e:
-                print(f"Player {bot.owner} code had exception: {e}!")
+    
+    # Update game state
+    tick_bots(game_state)
                 
     # Send out messages to clients
     message_delegators.delegate_server_messages(game_state, network)
