@@ -14,6 +14,7 @@ from sqlalchemy import true
 from sqlalchemy.exc import IntegrityError
 from flask_mailing import Mail, Message
 from forms import PasswordResetForm
+import logging
 
 mail = Mail()
 
@@ -112,20 +113,6 @@ def info_view():
 
     }
     return output
-    
-
-@app.route("/post", methods = ['POST'])
-def postJson():
-    try:
-        print (request.is_json)
-        content = request.get_json()
-        print(content)
-        print(content['device'])
-        print(content['value'])
-        print(content['timestamp'])
-        return content['timestamp']
-    except TypeError:
-        return ""
 
 @app.route("/register", methods= ["POST"])
 def register_user():

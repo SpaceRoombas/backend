@@ -6,11 +6,22 @@ from roombalang.parser import Parser
 from roombalang.transpiler import Transpiler
 from roombalang.interpreter import Interpreter
 from roombalang.exceptions import LangException
-
+import logging
+import sys
+from os import environ
 import message_delegators
 
+# Tunables
 GAME_LOOP_DELTA = 0.3
 NETWORK_UPDATE_DELTA = 0.1
+
+
+LOGLEVEL = environ.get('LOGGING', 'WARNING').upper()
+logging.basicConfig(
+    level=LOGLEVEL, 
+    handlers=[logging.StreamHandler(sys.stdout)],
+    format='%(levelname)s: -- %(message)s'
+)
 
 def tick_bots(game_state: GameState):
     bots = game_state.get_all_robots()
@@ -20,7 +31,7 @@ def tick_bots(game_state: GameState):
         try:
             bot.tick()
         except LangException as e:
-                print(f"Player {bot.owner} code had exception: {e}!")
+                logging.info(f"Player {bot.owner} code had exception: {e}!")
 
 def game_loop(game_state: GameState, network):
     client_messages = network.fetch_messages()
@@ -38,9 +49,12 @@ def game_loop(game_state: GameState, network):
 network = client_networking.RoombaNetwork(9001, NETWORK_UPDATE_DELTA)
 game_state = GameState()
 
-print("Starting main loop")
+logging.debug("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
 game_looper.start(GAME_LOOP_DELTA)
 
-print("Bringing up network")
+logging.debug("Bringing up network")
 network.start()
+
+# Server exit
+logging.shutdown()

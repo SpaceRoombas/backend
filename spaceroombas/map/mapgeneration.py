@@ -20,7 +20,6 @@ def Count_Neighbors(world,x,y,sides):
             elif sides: # if sides is true count an out of bound as true
                 count +=1
                 
-   #print("neighbors:",x,y,":", count - world[x][y])
     return count - world[x][y]
 
 #run one step of the simulation

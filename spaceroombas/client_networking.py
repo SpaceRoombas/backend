@@ -4,6 +4,7 @@ from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.task import LoopingCall
 from data.messages import Handshake
+import logging
 
 from data import serialization
 
@@ -66,11 +67,13 @@ class SessionHandler(protocol.Protocol):
         data_array = bytearray(data)
         buffersz = int.from_bytes(data_array[:4], byteorder='big') # First four bytes
         buffer = data_array[4:] # Remainder
+        bufflen = len(buffer)
 
-        if len(buffer) == buffersz:
+        if bufflen == buffersz:
             self.dispatch_carrier_deserialize(buffer)
         else:
-            raise RuntimeError("Recieved object of mismatched size")
+            logging.error("Packet head size mismatch: Told '%d' bytes, got '%d" % (buffersz, bufflen))
+            return
 
     def session_queue(self):
         session_structure = self.__factory.session_clients[self.__session_id]
@@ -102,7 +105,7 @@ class SessionHandler(protocol.Protocol):
             # TODO This MUST be refactored - we will probably see race conditions here
             # But essentially, this case is for a reconnect, so we will probaby need smarter
             # logic here
-            print("Reconnecting orphaned client")
+            logging.info("Reconnecting orphaned client")
             self.__factory.session_clients[self.__session_id].handler = self
 
         # TODO verify handshake
@@ -135,7 +138,7 @@ class SessionHandler(protocol.Protocol):
             message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
             self.session_queue().put(message_wrapper, True, QUEUE_TIMEOUT)
         except KeyError:
-            print("Session is not ready to accept messages (must complete handshake)")
+            logging.warn("Session is not ready to accept messages (must complete handshake)")
 
 class SessionHandlerFactory(protocol.Factory):
 
@@ -184,7 +187,7 @@ class RoombaNetwork():
         try:
             packed_message = serialization.package_for_shipping(message)
         except TypeError:
-            print("Attempted to send message without an associated mapper.. ignoring..")
+            logging.info("Attempted to send message without an associated mapper.. ignoring..")
             return
 
         self.enque_serialized(clientid, packed_message)
@@ -193,7 +196,7 @@ class RoombaNetwork():
         if self.factory is not None:
 
             if packed_message is None:
-                print("Object couldn't be packaged and something really bad happened")
+                logging.error("Object couldn't be packaged and something really bad happened")
                 return
 
             if clientid is None: # This message gets put into *ALL* clients
@@ -204,7 +207,7 @@ class RoombaNetwork():
                     client = self.factory.session_clients[clientid]
                     client.send_queue.put(packed_message, False)
                 except KeyError:
-                    print("Client does not exist")
+                    logging.info("Client does not exist")
                     return
 
     def get_clients(self):
@@ -216,7 +219,7 @@ class RoombaNetwork():
 
         send_looper = LoopingCall(self.__dispatch_client_messages)
 
-        print("Starting server on %d" % (self.__port))
+        logging.info("Starting server on %d" % (self.__port))
         
         send_looper.start(self.delta)
         server.listen(self.factory)
