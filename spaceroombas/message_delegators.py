@@ -1,6 +1,7 @@
 from typing import List
 from data import messages
 from data.state import GameState, PlayerExistsError, RobotMoveEvent
+import logging
 
 # ---------------------------
 #
@@ -31,7 +32,7 @@ class NewConnectionDelegator(MessageDelegator):
         try:
             game_state.add_player(message.client_id)
         except PlayerExistsError:
-            print("Got orphaned player: %s" % (message.client_id))
+            logging.info("Got orphaned player: %s" % (message.client_id))
             # Send robots. This happens on new players, because the creation
             # of their first robot will trigger a list send.
             # In which, we want EVERYONE to know
@@ -63,7 +64,7 @@ class PlayerFirmwareChangeDelegator(MessageDelegator):
         else:
             robot = game_state.get_robot(player, robot_id)
             robot.set_firmware(message.code)
-        print("Applied firmware change for (%s:%s)" % (player, robot_id))
+        logging.debug("Applied firmware change for \"%s:%s\"" % (player, robot_id))
             
 
 delegators = {
@@ -78,7 +79,7 @@ def delegate_client_message(messageWrapper, game_state, network):
     try:
         delegator = delegators[msg_type]
     except KeyError:
-        print("Failed delegating message (do not have a handler for that message)")
+        logging.info("Failed delegating message (do not have a handler for that message)")
         return
 
     delegator.delegate(messageWrapper, game_state, network)
@@ -94,7 +95,7 @@ def delegate_client_message(messageWrapper, game_state, network):
 class RobotMoveEventDelegator():
     def delegate(self, network, event):
         network_message = messages.PlayerRobotMoveMessage(event.player_id, event.robot_id, event.new.x, event.new.y)
-        print("Player \"%s\" Robot \"%s\" moved to: %s from: %s" 
+        logging.debug("Robot \"%s\":\"%s\" moved: %s -> %s" 
         % (
         event.player_id, 
         event.robot_id, 
@@ -116,7 +117,7 @@ def delegate_state_changes(events: list, network):
             delegator = event_delegators[event_type]
             delegator.delegate(network, event)
         except KeyError:
-            print("Cannot send this message out yet")
+            logging.info("Cannot send this message out yet")
 
 def delegate_notify_new_robots(game_state: GameState, network):
     robots = game_state.check_for_new_robots()

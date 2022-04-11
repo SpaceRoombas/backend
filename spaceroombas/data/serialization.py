@@ -3,7 +3,7 @@ from . import messages
 from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage
 
 from json import JSONEncoder, dumps as json_string, loads as load_json
-
+import logging
 # ---------------------------
 #
 # Payload Mappers
@@ -200,11 +200,11 @@ def map_carrier(carrier_dict):
         try:
             carrier_payload = mapper.map(carrier_dict['payload'])
         except KeyError:
-            print("Carrier payload has missing key")
+            logging.warn("Carrier payload has missing key")
             carrier_payload = None
             payload_type = "invalid"
     except KeyError:
-        print("Mapper doesn't exist for payload type")
+        logging.warn("Mapper doesn't exist for payload type")
         carrier_payload = None
         payload_type = "invalid"
 

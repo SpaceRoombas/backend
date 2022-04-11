@@ -1,13 +1,51 @@
-# backend
+# Spaceroombas Game Server
 
+This repo contains the game server for Spaceroombas written in Python. This houses all game state logic, the Spaceroombas interpreter and multiplayer netcode.
 
-# Build
-Since [Flatbuffers](https://google.github.io/flatbuffers/) are used in this project, `flatc` is required (currently v2.0.0).
+# Setup
 
-Flatbuffers are built by issuing:
+### Clone
+```
+git clone https://github.com/SpaceRoombas/backend.git spaceroombas-server
+cd spaceroombas-server
+```
+
+### (OPTIONAL, BUT RECOMMENDED) Setup virtual environment
 
 ```
-flatc --python -I ./flats -o ./spaceroombas/network/flats ./flats/*
+python -m venv venv
 ```
 
-This will generate the necessary python classes which ***ARE NOT*** committed to source control.
+> Powershell (Windows)
+
+```
+.\venv\Scripts\Activate.ps1
+```
+
+> Everyone else
+
+```
+source venv/bin/activate
+```
+
+### Install deps
+
+```
+pip install -r requirements.txt
+```
+
+## Running standalone game session server
+
+This method is primarily intended for testing. This will run a server for game sessions on a default port of `9001`.
+
+```
+python spaceroombas/session_server.py
+```
+
+### Verbose output
+
+Set the `LOGLEVEL` environment variable to `INFO` or `DEBUG` for additional logging output:
+
+```
+LOGLEVEL=DEBUG python spaceroombas/session_server.py
+```

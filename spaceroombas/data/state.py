@@ -7,8 +7,8 @@ from uuid import uuid4
 from roombalang import interpreter
 from roombalang import parser
 from roombalang import transpiler
-
-
+from .util import create_interpreter_function_bindings
+import logging
 class PlayerExistsError(RuntimeError):
     pass
 
@@ -86,21 +86,19 @@ class MapState():
                 sector2.sect_up = sector1
                 return True
             else:
-                # print("sectors do not connect",sector1id,sector2id)
                 return False
         else:
-            # print("sectors do not exist in map",sector1id,sector2id)
             return False
 
     def get_sector(self, sector_id):
         if self.__sectors.get(sector_id) is None:
-            print("couldnt find sector")
+            logging.warn("couldnt find sector: %s" % (sector_id))
             return None
         else:
             return self.__sectors[sector_id]
 
     def sector_count(self):
-        print(len(self.__sectors.keys()))
+        logging.info(len(self.__sectors.keys()))
         return len(self.__sectors.keys())
 
     def generate_map_sector(self, sector_id):  ## TODO incorporate logic for adding to current graph/ update ID
@@ -114,7 +112,7 @@ class MapState():
             return True
 
         else:
-            print("error sector already created")
+            logging.warn("Sector already exists: %s" % (sector_id))
             return False
 
     def update_walkable(self, location: EntityLocation, walkable):
@@ -156,22 +154,32 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.parser = parser
         self.transpiler = transpiler
         self.interpreter = None
+        self.bound_functions = {}
 
         self.init_default_robot()
 
-    def tick(self, fns):
-        self.interpreter.set_fns(fns)
-        self.interpreter.tick()
+    def tick(self):
+        if self.interpreter is not None:
+            self.interpreter.tick()
 
     def init_default_robot(self):
         self.set_firmware("while(true){move_north() move_east() move_south() move_west()}")
 
     def init_interpreter(self):
-        self.interpreter = interpreter.Interpreter(self.firmware, {}, self.parser, self.transpiler)
+        self.interpreter = interpreter.Interpreter(self.firmware, self.bound_functions, self.parser, self.transpiler)
 
     def set_firmware(self, code):
         self.firmware = code
         self.init_interpreter()
+    
+    def set_bound_functions(self, fns: dict):
+        if type(fns) != dict:
+            self.bound_functions = {}
+            return
+
+        self.bound_functions = fns
+        if self.interpreter is not None:
+            self.interpreter.set_fns(self.bound_functions)
 
 class PlayerState:
     def __init__(self, player_id, sector_id, parser, transpiler):
@@ -186,6 +194,7 @@ class PlayerState:
     def add_robot(self, location: EntityLocation):
         robot = PlayerRobot(self.player_id, location, self.parser, self.transpiler)
         self.robots[robot.robot_id] = robot
+        return robot
     
     def add_state_change_event(self, change_event):
         self.change_events.put(change_event)
@@ -218,26 +227,37 @@ class GameState:
         x = 20  # TODO implement logic to spawn starting robot not in a used tile
         y = 20
         self.add_robot(player_id, EntityLocation(sector, x, y))
+        logging.info("Player added: %s" % (player_id))
 
     def add_robot(self, player_id, location: EntityLocation):  # TODO set up so the robot is spawned in valid location
+        robot = None
         if self.players.get(player_id) is None:
-            print("invalid player id to add robot to")
+            logging.warn("invalid player id to add robot to")
             return False
         else:
-            self.players[player_id].add_robot(location)
+            robot = self.players[player_id].add_robot(location)
+            self.__bind_robot_functions(robot)
             self.map.update_walkable(location, False)
             self.NEW_ROBOT_FLAG = True
             return True
+    
+    def __bind_robot_functions(self, robot: PlayerRobot):
+        fns = create_interpreter_function_bindings(self, robot)
+        robot.set_bound_functions(fns)
 
     def get_robot(self, player_id, robot_id):
-        player = self.players[player_id]
-        return player.robots[robot_id]
+        try:
+            player = self.players[player_id]
+            return player.robots[robot_id]
+        except KeyError:
+            logging.warn("Tried to fetch robot %s:%s, but doesn't exist" % (player_id, robot_id))
+            return
 
     def get_player_robots(self, player_id):
         try:
             player = self.players[player_id]
         except KeyError:
-            print("Player '%s' doesnt exist" % (player_id))
+            logging.warn("Player '%s' doesnt exist" % (player_id))
             return None
         return player.robots
     
@@ -262,12 +282,12 @@ class GameState:
             player = self.players[player_id]
             robot = player.robots[robot_id]
         except KeyError:
-            print("Failed to fetch player or robot that doesnt exist")
+            logging.info("Failed to fetch player or robot %s:%s" % (player_id, robot_id))
             return
 
         # Check co-ord params and set current location (no change in that co-ord)
         if dx == 0 and dy == 0:
-            print("Passed bad location")
+            logging.warn("Robot move got bad location delta: X: %s Y: %s" % (dx, dy))
             return False
 
         wantedLocation = EntityLocation(robot.location.sector, robot.location.x + dx, robot.location.y + dy)
@@ -282,7 +302,7 @@ class GameState:
             self.map.update_walkable(wantedLocation, False)
             return True
         else:
-            print("tile was in use: %s" % (wantedLocation))
+            logging.debug("\"%s:%s\" wanted tile in use: %s" % (player_id, robot_id, wantedLocation))
             return False
 
     # Aliases for robot movement
