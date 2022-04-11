@@ -246,8 +246,12 @@ class GameState:
         robot.set_bound_functions(fns)
 
     def get_robot(self, player_id, robot_id):
-        player = self.players[player_id]
-        return player.robots[robot_id]
+        try:
+            player = self.players[player_id]
+            return player.robots[robot_id]
+        except KeyError:
+            logging.warn("Tried to fetch robot %s:%s, but doesn't exist" % (player_id, robot_id))
+            return
 
     def get_player_robots(self, player_id):
         try:
