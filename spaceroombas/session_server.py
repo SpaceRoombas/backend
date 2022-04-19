@@ -15,13 +15,13 @@ import message_delegators
 GAME_LOOP_DELTA = 0.3
 NETWORK_UPDATE_DELTA = 0.1
 
-
 LOGLEVEL = environ.get('LOGGING', 'WARNING').upper()
 logging.basicConfig(
-    level=LOGLEVEL, 
+    level=LOGLEVEL,
     handlers=[logging.StreamHandler(sys.stdout)],
     format='%(levelname)s: -- %(message)s'
 )
+
 
 def tick_bots(game_state: GameState):
     bots = game_state.get_all_robots()
@@ -31,7 +31,8 @@ def tick_bots(game_state: GameState):
         try:
             bot.tick()
         except LangException as e:
-                logging.info(f"Player {bot.owner} code had exception: {e}!")
+            logging.info(f"Player {bot.owner} code had exception: {e}!")
+
 
 def game_loop(game_state: GameState, network):
     client_messages = network.fetch_messages()
@@ -39,12 +40,13 @@ def game_loop(game_state: GameState, network):
     # Delegate all messages and apply to game state
     for client_message in client_messages:
         message_delegators.delegate_client_message(client_message, game_state, network)
-    
+
     # Update game state
     tick_bots(game_state)
-                
+
     # Send out messages to clients
     message_delegators.delegate_server_messages(game_state, network)
+
 
 network = client_networking.RoombaNetwork(9001, NETWORK_UPDATE_DELTA)
 game_state = GameState()

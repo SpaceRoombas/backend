@@ -9,12 +9,15 @@ from roombalang import parser
 from roombalang import transpiler
 from .util import create_interpreter_function_bindings
 import logging
+
+
 class PlayerExistsError(RuntimeError):
     pass
 
+
 # Various state change events
 
-class RobotMoveEvent():
+class RobotMoveEvent:
 
     def __init__(self, player_id, robot_id, old_location, new_location) -> None:
         self.player_id = player_id
@@ -23,7 +26,7 @@ class RobotMoveEvent():
         self.new = new_location
 
 
-class MapSector():
+class MapSector:
     def __init__(self, sector_id) -> None:
         self.land_map = mapgeneration.generate()  # TODO update map to hold more information... like walkable
         self.sector_id = sector_id
@@ -40,7 +43,7 @@ class MapSector():
         return str(x) + "," + str(y)
 
 
-class EntityLocation():
+class EntityLocation:
 
     def __init__(self, sector, x, y) -> None:
         # TODO This references the whole sector object, when really it should be a sector id
@@ -55,7 +58,7 @@ class EntityLocation():
         return "sec:" + self.sector.sector_id + " x,y:" + str(self.x) + "," + str(self.y)
 
 
-class MapState():
+class MapState:
 
     def __init__(self):
         # Generate first map sector
@@ -134,6 +137,20 @@ class MapState():
         current_sector = self.get_sector(location.sector.sector_id)
         return current_sector.land_map[location.x][location.y][0]
 
+    def check_tile_mineable(self, location: EntityLocation):
+        if self.violates_map_bounds(location.x, location.y):
+            return False
+
+        current_sector = self.get_sector(location.sector.sector_id)
+        return current_sector.land_map[location.x][location.y][1] == 1
+
+    def mine_tile(self, location: EntityLocation):
+        if self.check_tile_mineable(location):
+            current_sector = self.get_sector(location.sector.sector_id)
+            current_sector.land_map[location.x][location.y][1] = 0
+            current_sector.land_map[location.x][location.y][1] = True
+            return True
+        return False
 
 class GameObject:  # TODO game object... we can have buildings ext
     def __init__(self, owner_id, location: EntityLocation):
@@ -155,6 +172,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.transpiler = transpiler
         self.interpreter = None
         self.bound_functions = {}
+        self.resources = 4
 
         self.init_default_robot()
 
@@ -163,7 +181,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
             self.interpreter.tick()
 
     def init_default_robot(self):
-        self.set_firmware("while(true){move_north() move_east() move_south() move_west()}")
+        self.set_firmware("while(true){move_north() move_east() move_south() move_west() terraform() mine(0)}")
 
     def init_interpreter(self):
         self.interpreter = interpreter.Interpreter(self.firmware, self.bound_functions, self.parser, self.transpiler)
@@ -171,7 +189,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
     def set_firmware(self, code):
         self.firmware = code
         self.init_interpreter()
-    
+
     def set_bound_functions(self, fns: dict):
         if type(fns) != dict:
             self.bound_functions = {}
@@ -180,6 +198,29 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.bound_functions = fns
         if self.interpreter is not None:
             self.interpreter.set_fns(self.bound_functions)
+
+    def terraform(self, state):
+        if self.resources >= 4:
+            self.resources -= 4
+            state.players[self.owner].score += 1
+
+    def mine(self, state, direction):
+        """mines a resource in the direction specified, 0=N 1=E 2=S 3=W"""
+
+        mine_pos = EntityLocation(self.location.sector, self.location.x, self.location.y)
+
+        if direction == 0:
+            mine_pos.y += 1
+        elif direction == 1:
+            mine_pos.x += 1
+        elif direction == 2:
+            mine_pos.y -= 1
+        else:
+            mine_pos.x -= 1
+
+        if state.map.mine_tile(mine_pos):
+            self.resources += 1
+
 
 class PlayerState:
     def __init__(self, player_id, sector_id, parser, transpiler):
@@ -190,22 +231,24 @@ class PlayerState:
         self.parser = parser
         self.transpiler = transpiler
         self.change_events = Queue()
+        self.score = 0
 
     def add_robot(self, location: EntityLocation):
         robot = PlayerRobot(self.player_id, location, self.parser, self.transpiler)
         self.robots[robot.robot_id] = robot
         return robot
-    
+
     def add_state_change_event(self, change_event):
         self.change_events.put(change_event)
-    
+
     def get_list_state_change_events(self):
         events = list()
 
         while not self.change_events.empty():
             events.append(self.change_events.get())
-        
+
         return events
+
 
 class GameState:
     def __init__(self):
@@ -240,7 +283,7 @@ class GameState:
             self.map.update_walkable(location, False)
             self.NEW_ROBOT_FLAG = True
             return True
-    
+
     def __bind_robot_functions(self, robot: PlayerRobot):
         fns = create_interpreter_function_bindings(self, robot)
         robot.set_bound_functions(fns)
@@ -260,7 +303,7 @@ class GameState:
             logging.warn("Player '%s' doesnt exist" % (player_id))
             return None
         return player.robots
-    
+
     def check_for_new_robots(self):
         if self.NEW_ROBOT_FLAG == True:
             self.NEW_ROBOT_FLAG = False
@@ -319,4 +362,3 @@ class GameState:
         return self.move_player_robot(player_id, robot_id, 1, 0)
 
 # TODO add logic for movement between sectors, check movement code to be neater
-
