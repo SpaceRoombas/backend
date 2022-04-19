@@ -155,6 +155,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.transpiler = transpiler
         self.interpreter = None
         self.bound_functions = {}
+        self.resources = 4
 
         self.init_default_robot()
 
@@ -163,7 +164,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
             self.interpreter.tick()
 
     def init_default_robot(self):
-        self.set_firmware("while(true){move_north() move_east() move_south() move_west()}")
+        self.set_firmware("while(true){move_north() move_east() move_south() move_west() terraform()}")
 
     def init_interpreter(self):
         self.interpreter = interpreter.Interpreter(self.firmware, self.bound_functions, self.parser, self.transpiler)
@@ -181,6 +182,13 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         if self.interpreter is not None:
             self.interpreter.set_fns(self.bound_functions)
 
+    def terraform(self, state):
+        if self.resources >= 4:
+            self.resources -= 4
+            state.players[self.owner].score += 1
+
+
+
 class PlayerState:
     def __init__(self, player_id, sector_id, parser, transpiler):
         self.home_sector = sector_id
@@ -190,6 +198,7 @@ class PlayerState:
         self.parser = parser
         self.transpiler = transpiler
         self.change_events = Queue()
+        self.score = 0
 
     def add_robot(self, location: EntityLocation):
         robot = PlayerRobot(self.player_id, location, self.parser, self.transpiler)

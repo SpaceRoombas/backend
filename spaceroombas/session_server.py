@@ -48,6 +48,7 @@ def game_loop(game_state: GameState, network):
 
 network = client_networking.RoombaNetwork(9001, NETWORK_UPDATE_DELTA)
 game_state = GameState()
+game_state.add_player(0)
 
 logging.debug("Starting main loop")
 game_looper = LoopingCall(game_loop, game_state, network)
