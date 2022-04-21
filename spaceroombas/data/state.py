@@ -1,7 +1,10 @@
 from enum import Flag
 from queue import Queue
+
 from site import setcopyright
 from tokenize import String
+from turtle import distance
+from xml.dom.minidom import Entity
 from map import mapgeneration
 from uuid import uuid4
 from roombalang import interpreter
@@ -9,7 +12,7 @@ from roombalang import parser
 from roombalang import transpiler
 from .util import create_interpreter_function_bindings
 import logging
-
+import random
 
 class PlayerExistsError(RuntimeError):
     pass
@@ -28,7 +31,7 @@ class RobotMoveEvent:
 
 class MapSector:
     def __init__(self, sector_id) -> None:
-        self.land_map = mapgeneration.generate()  # TODO update map to hold more information... like walkable
+        self.land_map = mapgeneration.generate()  # TODO update map to hold more information... 
         self.sector_id = sector_id
         self.sect_up = None
         self.sect_down = None
@@ -93,6 +96,9 @@ class MapState:
         else:
             return False
 
+    def get_sector_ids(self):
+        return list(self.__sectors)
+
     def get_sector(self, sector_id):
         if self.__sectors.get(sector_id) is None:
             logging.warn("couldnt find sector: %s" % (sector_id))
@@ -104,7 +110,7 @@ class MapState:
         logging.info(len(self.__sectors.keys()))
         return len(self.__sectors.keys())
 
-    def generate_map_sector(self, sector_id):  ## TODO incorporate logic for adding to current graph/ update ID
+    def generate_map_sector(self, sector_id):  
         if self.__sectors.get(sector_id) is None:
             self.__sectors[sector_id] = MapSector(sector_id)
             x, y = MapSector.parse_id(sector_id)
@@ -259,18 +265,56 @@ class GameState:
         self.NEW_ROBOT_FLAG = False
 
     def add_player(self, player_id):
-        sector = self.map.get_sector(
-            "0,0")  # TODO implement logic to spawn new player in their own starting sector/for now to base
+        x,y=self.choose_spawn_sector()
+        sector_id = MapSector.form_sector_id(x,y)
+        
+        self.map.generate_map_sector(sector_id)
+        sector = self.map.get_sector(sector_id) 
+
         playerState = PlayerState(player_id, sector, self.parser, self.transpiler)
 
         if player_id in self.players:  ## TODO implement logic here for orphan clients
             raise PlayerExistsError("Player already exists")
 
         self.players[player_id] = playerState
-        x = 20  # TODO implement logic to spawn starting robot not in a used tile
+
+        x = 20  
         y = 20
+        while False == self.map.check_tile_available(EntityLocation(sector,x,y)):
+            logging.warning("tile in use",x,y,sector_id)
+            x+=1
+            
+
         self.add_robot(player_id, EntityLocation(sector, x, y))
         logging.info("Player added: %s" % (player_id))
+
+    def choose_spawn_sector(self):
+        def check_distance(x1,y1,previous,dist): #returns false if any point is with in the distance
+            for p in previous:
+                if dist > abs(x1-p[0])+abs(y1-p[1]): #manhattan distance
+                    return False
+            return True
+
+        indexs = []
+        sectors = self.map.get_sector_ids()
+
+        for s in sectors:
+            indexs.append(MapSector.parse_id(s))
+        
+        xdelta=0
+        ydelta=0
+        x=0
+        y=0
+        distance = random.randint(3,6)
+        while xdelta == 0 and ydelta == 0:
+            xdelta = random.randint(-1,1)
+            ydelta = random.randint(-1,1)
+
+        while check_distance(x,y,indexs,distance) == False:
+            x +=xdelta
+            y +=ydelta
+        return x,y
+
 
     def add_robot(self, player_id, location: EntityLocation):  # TODO set up so the robot is spawned in valid location
         robot = None
