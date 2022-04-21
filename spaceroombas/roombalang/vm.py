@@ -4,11 +4,13 @@ from .exceptions import LangException
 
 MAX_INSTRUCTIONS_PER_TICK = 100
 
+
 class Stack:
     def __init__(self, parent=None, addr=None):
         self._parent = parent
         if parent is None:
-            self._vars = {"true": [True], "false": [False], "pi": [3.14159265359]}
+            self._vars = {"true": [True], "false": [False], "pi": [3.14159265359], "north": [0], "east": [1],
+                          "south": [2], "west": [3]}
         else:
             self._vars = {}
         self.addr = addr
