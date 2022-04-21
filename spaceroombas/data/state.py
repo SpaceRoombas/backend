@@ -97,7 +97,7 @@ class MapState:
             return False
 
     def get_sector_ids(self):
-        return list(self.__sectors)
+        return list(self.__sectors.keys())
 
     def get_sector(self, sector_id):
         if self.__sectors.get(sector_id) is None:
