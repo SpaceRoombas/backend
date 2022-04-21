@@ -286,8 +286,11 @@ class VM:
                     break
 
             except Exception:
-                print(f"vm crash at ins: {self.pointer}\n {bytecode[self.pointer]}")
-                print(bytecode)
+                if len(bytecode) == 0:
+                    print(f"vm crash, no code!")
+                else:
+                    print(f"vm crash at ins: {self.pointer}\n {bytecode[self.pointer]}")
+                    print(bytecode)
 
                 raise LangException(-1, "Vm Error!")
 

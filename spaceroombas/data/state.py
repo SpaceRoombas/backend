@@ -181,7 +181,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
             self.interpreter.tick()
 
     def init_default_robot(self):
-        self.set_firmware("while(true){move_north() move_east() move_south() move_west() terraform() mine(0)}")
+        self.set_firmware("")
 
     def init_interpreter(self):
         self.interpreter = interpreter.Interpreter(self.firmware, self.bound_functions, self.parser, self.transpiler)
@@ -220,6 +220,11 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
         if state.map.mine_tile(mine_pos):
             self.resources += 1
+
+        def look(direction):
+            """returns list with the first element being the terrain type, the second being -1 if no bot is present
+            and the player number if one is, the third -1 if no bot is present and the number of resources if one is"""
+            return
 
 
 class PlayerState:
