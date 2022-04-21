@@ -188,7 +188,10 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
     def set_firmware(self, code):
         self.firmware = code
-        self.init_interpreter()
+        try:
+            self.init_interpreter()
+        except:
+            logging.log("Syntax error!")
 
     def set_bound_functions(self, fns: dict):
         if type(fns) != dict:
