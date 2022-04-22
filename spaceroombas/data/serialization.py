@@ -15,15 +15,18 @@ class PayloadMapper():
     def map(self, dict):
         raise NotImplementedError
 
+
 class HandshakePayloadMapper(PayloadMapper):
 
     def map(self, dict):
         return Handshake(dict['username'], dict['signature'], dict['status'])
 
+
 class PlayerDetailsMapper(PayloadMapper):
     def map(self, dict):
-        return PlayerDetails(dict['player_name'], dict['server_address'], 
-        dict['token_millis'], dict['match_end_millis'], dict['signature'])
+        return PlayerDetails(dict['player_name'], dict['server_address'],
+                             dict['token_millis'], dict['match_end_millis'], dict['signature'])
+
 
 class PlayerFirmwareChangeMapper(PayloadMapper):
 
@@ -41,29 +44,32 @@ class PlayerFirmwareChangeMapper(PayloadMapper):
 class CarrierPigeonEncoder(JSONEncoder):
     def default(self, obj):
         return {
-            "type":obj.type,
-            "payload_type":obj.payload_type,
-            "payload":obj.payload
+            "type": obj.type,
+            "payload_type": obj.payload_type,
+            "payload": obj.payload
         }
+
 
 class HandshakeEncoder(JSONEncoder):
     def default(self, obj):
         return {
-            'username':obj.username,
-            'status':obj.status,
-            'signature':obj.signature
+            'username': obj.username,
+            'status': obj.status,
+            'signature': obj.signature
         }
-    
+
     def encode(self, o) -> str:
         return super().encode(o)
 
+
 class PlayerFirmwareChangeEncoder(JSONEncoder):
-        def default(self, obj):
-            return {
-                "code":obj.code,
-                "player_id":obj.player_id,
-                "robot_id":obj.robot_id
-            }
+    def default(self, obj):
+        return {
+            "code": obj.code,
+            "player_id": obj.player_id,
+            "robot_id": obj.robot_id
+        }
+
 
 class MapSectorEncoder(JSONEncoder):
     def default(self, obj):
@@ -72,29 +78,30 @@ class MapSectorEncoder(JSONEncoder):
             # Note: This is probably expensive
             mapsz = self._get_map_size(obj.land_map)
             return {
-                "land_map":self.encode_landmap(obj.land_map),
-                "map_rows":mapsz[0],
-                "map_cols":mapsz[1],
-                "sect_up":self._safe_get_sector_id(obj.sect_up),
-                "sect_down":self._safe_get_sector_id(obj.sect_down),
-                "sect_left":self._safe_get_sector_id(obj.sect_left),
-                "sect_right":self._safe_get_sector_id(obj.sect_right),
+                "sector_id": obj.sector_id,
+                "land_map": self.encode_landmap(obj.land_map),
+                "map_rows": mapsz[0],
+                "map_cols": mapsz[1],
+                "sect_up": self._safe_get_sector_id(obj.sect_up),
+                "sect_down": self._safe_get_sector_id(obj.sect_down),
+                "sect_left": self._safe_get_sector_id(obj.sect_left),
+                "sect_right": self._safe_get_sector_id(obj.sect_right),
             }
 
     def _safe_get_sector_id(self, sector):
         if sector is None:
             return None
         return sector.sector_id
-    
+
     def _get_map_size(self, map):
-        return (len(map), len(map[0])) # We will assume square maps
-    
+        return (len(map), len(map[0]))  # We will assume square maps
+
     def encode_landmap(self, map):
         mapsz = self._get_map_size(map)
         totalLen = (mapsz[0] * mapsz[1])
         pos = 0
 
-        # Calculate 
+        # Calculate
         encoded = [None] * totalLen
         for row in map:
             for tile in row:
@@ -102,38 +109,43 @@ class MapSectorEncoder(JSONEncoder):
                 pos = pos + 1
         return "".join(encoded)
 
+
 class RobotMoveMessageEncoder(JSONEncoder):
-        def default(self, obj):
-            return {
-                "player_id":obj.player_id,
-                "robot_id":obj.robot_id,
-                "x":obj.x,
-                "y":obj.y
-            }
+    def default(self, obj):
+        return {
+            "player_id": obj.player_id,
+            "robot_id": obj.robot_id,
+            "x": obj.x,
+            "y": obj.y
+        }
+
 
 class RobotListingEncoder(JSONEncoder):
-        def default(self, obj: messages.RobotListingMessage):
-            return {
-                "num_robots":obj.num_bots,
-                "robots":obj.robots,
-            }
+    def default(self, obj: messages.RobotListingMessage):
+        return {
+            "num_robots": obj.num_bots,
+            "robots": obj.robots,
+        }
+
 
 class EntityLocationEncoder(JSONEncoder):
-        def default(self, obj: EntityLocation):
-            return {
-                "sector_id":obj.sector.sector_id,
-                "x":obj.x,
-                "y":obj.y
-            }
+    def default(self, obj: EntityLocation):
+        return {
+            "sector_id": obj.sector.sector_id,
+            "x": obj.x,
+            "y": obj.y
+        }
+
 
 class PlayerRobotEncoder(JSONEncoder):
-        def default(self, obj: PlayerRobot):
-            return {
-                "owner":obj.owner,
-                "robot_id":obj.robot_id,
-                "location":obj.location,
-                "firmware":obj.firmware,
-            }
+    def default(self, obj: PlayerRobot):
+        return {
+            "owner": obj.owner,
+            "robot_id": obj.robot_id,
+            "location": obj.location,
+            "firmware": obj.firmware,
+        }
+
 
 class JsonEncodingDelegator(JSONEncoder):
 
@@ -156,7 +168,8 @@ class JsonEncodingDelegator(JSONEncoder):
         objType = type(mObj)
         try:
             encoder = self.encoders[objType]
-            return encoder(*self.args, **self.kwargs).default(mObj) # This could be slow for high-volume messages
+            # This could be slow for high-volume messages
+            return encoder(*self.args, **self.kwargs).default(mObj)
         except KeyError:
             return self.fallbackEncoder.default(mObj)
 
@@ -166,21 +179,22 @@ class JsonEncodingDelegator(JSONEncoder):
 #
 # ---------------------------
 
+
 carrier_mappers = {
-    'handshake':HandshakePayloadMapper(),
-    'player_details':PlayerDetailsMapper(),
-    'firmware_change':PlayerFirmwareChangeMapper(),
+    'handshake': HandshakePayloadMapper(),
+    'player_details': PlayerDetailsMapper(),
+    'firmware_change': PlayerFirmwareChangeMapper(),
 }
 
 obj_encoders = {
-            CarrierPigeon:CarrierPigeonEncoder,
-            messages.Handshake:HandshakeEncoder,
-            MapSector:MapSectorEncoder,
-            PlayerFirmwareChange:PlayerFirmwareChangeEncoder,
-            PlayerRobotMoveMessage:RobotMoveMessageEncoder,
-            messages.RobotListingMessage:RobotListingEncoder,
-            PlayerRobot:PlayerRobotEncoder,
-            EntityLocation:EntityLocationEncoder,
+    CarrierPigeon: CarrierPigeonEncoder,
+    messages.Handshake: HandshakeEncoder,
+    MapSector: MapSectorEncoder,
+    PlayerFirmwareChange: PlayerFirmwareChangeEncoder,
+    PlayerRobotMoveMessage: RobotMoveMessageEncoder,
+    messages.RobotListingMessage: RobotListingEncoder,
+    PlayerRobot: PlayerRobotEncoder,
+    EntityLocation: EntityLocationEncoder,
 }
 
 
@@ -191,6 +205,7 @@ obj_encoders = {
 # ---------------------------
 
 encodingDelegator = JsonEncodingDelegator(obj_encoders)
+
 
 def map_carrier(carrier_dict):
     payload_type = carrier_dict['payload_type']
@@ -210,12 +225,15 @@ def map_carrier(carrier_dict):
 
     return CarrierPigeon(carrier_dict['type'], payload_type, carrier_payload)
 
+
 def serialize(message_type, mObj):
     objTypeName = str(type(mObj).__name__)
     pigeon = CarrierPigeon(message_type, objTypeName, mObj)
     return json_string(pigeon, cls=encodingDelegator, separators=(',', ':'))
 
-package_for_shipping = lambda mObj: serialize("message", mObj)
+
+def package_for_shipping(mObj): return serialize("message", mObj)
+
 
 def unpackage_carrier(carrier):
     carrier_dict = load_json(carrier)
