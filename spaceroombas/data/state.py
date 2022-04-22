@@ -175,7 +175,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.transpiler = transpiler
         self.interpreter = None
         self.bound_functions = {}
-        self.resources = 4
+        self.resources = 0
 
         self.init_default_robot()
 
@@ -184,8 +184,12 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
             self.interpreter.tick()
 
     def init_default_robot(self):
+<<<<<<< HEAD
         self.set_firmware(
             "while(true){move_north() move_east() move_south() move_west() terraform() mine(0)}")
+=======
+        self.set_firmware("while(true){move(rand_dir()) reproduce(rand_dir()) mine(rand_dir()) terraform()}")
+>>>>>>> 847d941e3ea170e4649f74c848e99223492b3817
 
     def init_interpreter(self):
         self.interpreter = interpreter.Interpreter(
@@ -193,7 +197,10 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
     def set_firmware(self, code):
         self.firmware = code
-        self.init_interpreter()
+        try:
+            self.init_interpreter()
+        except:
+            logging.log("Syntax error!")
 
     def set_bound_functions(self, fns: dict):
         if type(fns) != dict:
@@ -226,6 +233,49 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
         if state.map.mine_tile(mine_pos):
             self.resources += 1
+
+    def look(self, state, direction):
+        """returns id of tile type, -2 if map edge, or -1 if robot"""
+
+        look_pos = EntityLocation(self.location.sector, self.location.x, self.location.y)
+
+        if direction == 0:
+            look_pos.y += 1
+        elif direction == 1:
+            look_pos.x += 1
+        elif direction == 2:
+            look_pos.y -= 1
+        else:
+            look_pos.x -= 1
+
+        if state.map.violates_map_bounds(look_pos.x, look_pos.y):
+            return -2
+
+        sector = state.map.get_sector(direction.sector.sector_id)
+
+        if not state.map.check_tile_available(look_pos) and sector.land_map[look_pos.x][look_pos.y][1] == 0:
+            return -1
+
+        else:
+            return sector.land_map[look_pos.x][look_pos.y][1]
+
+    def reproduce(self, state, direction):
+        """creates a new robot in the direction specified, 0=N 1=E 2=S 3=W"""
+
+        new_pos = EntityLocation(self.location.sector, self.location.x, self.location.y)
+
+        if direction == 0:
+            new_pos.y += 1
+        elif direction == 1:
+            new_pos.x += 1
+        elif direction == 2:
+            new_pos.y -= 1
+        else:
+            new_pos.x -= 1
+
+        if state.map.check_tile_available(new_pos) and self.resources >= 1:
+            self.resources -= 1
+            state.add_robot(self.owner, new_pos)
 
 
 class PlayerState:
