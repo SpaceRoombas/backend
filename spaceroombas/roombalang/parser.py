@@ -86,6 +86,9 @@ iden: /[^\W\d]\w*/
 %import common.NUMBER  -> NUMBER
 
 %ignore /[ \t\f\r]+/
+
+%import common.WS 
+%ignore WS 
 '''
 
 
