@@ -184,12 +184,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
             self.interpreter.tick()
 
     def init_default_robot(self):
-<<<<<<< HEAD
         self.set_firmware(
-            "while(true){move_north() move_east() move_south() move_west() terraform() mine(0)}")
-=======
-        self.set_firmware("while(true){move(rand_dir()) reproduce(rand_dir()) mine(rand_dir()) terraform()}")
->>>>>>> 847d941e3ea170e4649f74c848e99223492b3817
+            "while(true){move(rand_dir()) reproduce(rand_dir()) mine(rand_dir()) terraform()}")
 
     def init_interpreter(self):
         self.interpreter = interpreter.Interpreter(
@@ -200,7 +196,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         try:
             self.init_interpreter()
         except:
-            logging.log("Syntax error!")
+            logging.info(
+                f"Robot {self.owner}:{self.robot_id} had syntax error")
 
     def set_bound_functions(self, fns: dict):
         if type(fns) != dict:
@@ -237,7 +234,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
     def look(self, state, direction):
         """returns id of tile type, -2 if map edge, or -1 if robot"""
 
-        look_pos = EntityLocation(self.location.sector, self.location.x, self.location.y)
+        look_pos = EntityLocation(
+            self.location.sector, self.location.x, self.location.y)
 
         if direction == 0:
             look_pos.y += 1
@@ -262,7 +260,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
     def reproduce(self, state, direction):
         """creates a new robot in the direction specified, 0=N 1=E 2=S 3=W"""
 
-        new_pos = EntityLocation(self.location.sector, self.location.x, self.location.y)
+        new_pos = EntityLocation(self.location.sector,
+                                 self.location.x, self.location.y)
 
         if direction == 0:
             new_pos.y += 1
