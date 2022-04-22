@@ -2,9 +2,6 @@ from random import shuffle
 from data.state import GameState
 import client_networking
 from twisted.internet.task import LoopingCall
-from roombalang.parser import Parser
-from roombalang.transpiler import Transpiler
-from roombalang.interpreter import Interpreter
 from roombalang.exceptions import LangException
 import logging
 import sys
@@ -39,7 +36,8 @@ def game_loop(game_state: GameState, network):
 
     # Delegate all messages and apply to game state
     for client_message in client_messages:
-        message_delegators.delegate_client_message(client_message, game_state, network)
+        message_delegators.delegate_client_message(
+            client_message, game_state, network)
 
     # Update game state
     tick_bots(game_state)
@@ -48,15 +46,21 @@ def game_loop(game_state: GameState, network):
     message_delegators.delegate_server_messages(game_state, network)
 
 
-network = client_networking.RoombaNetwork(9001, NETWORK_UPDATE_DELTA)
-game_state = GameState()
+def spin_server(port):
+    network = client_networking.RoombaNetwork(port, NETWORK_UPDATE_DELTA)
+    game_state = GameState()
 
-logging.debug("Starting main loop")
-game_looper = LoopingCall(game_loop, game_state, network)
-game_looper.start(GAME_LOOP_DELTA)
+    logging.debug("Starting main loop")
+    game_looper = LoopingCall(game_loop, game_state, network)
+    game_looper.start(GAME_LOOP_DELTA)
 
-logging.debug("Bringing up network")
-network.start()
+    logging.debug("Bringing up network")
+    network.start()
 
-# Server exit
-logging.shutdown()
+    # Server exit
+    logging.shutdown()
+
+
+if __name__ == "__main__":
+    port = int(environ.get('PORT', '9001'))
+    spin_server(port)

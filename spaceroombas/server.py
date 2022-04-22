@@ -1,4 +1,3 @@
-#from crypt import methods
 from flask import Flask, flash
 from flask import jsonify
 from flask import request
@@ -14,7 +13,85 @@ from sqlalchemy import true
 from sqlalchemy.exc import IntegrityError
 from flask_mailing import Mail, Message
 from forms import PasswordResetForm
+from subprocess import Popen
+from sys import executable, stdout
+from pathlib import Path
 import logging
+
+LOGLEVEL = os.environ.get('LOGGING', 'WARNING').upper()
+logging.basicConfig(
+    level=LOGLEVEL, 
+    handlers=[logging.StreamHandler(stdout)],
+    format='%(levelname)s: -- %(message)s'
+)
+
+class MatchSession():
+    
+    def __init__(self, port:int, userids):
+        self.players: list[str] = []
+        self.port: int = port
+        self.players += self.__ensure_string_list(userids)
+        self.session_process: Popen = None
+
+    def __ensure_string_list(self, it):
+        objType = type(it)
+        if objType != list and objType == str:
+            return [it]
+        return it
+
+    def create_process(self):
+        spaceroombas_path = Path(__file__).parent.resolve()
+        server_path = Path(str(spaceroombas_path), 'session_server.py')
+        envvars = dict(os.environ.items())
+        envvars['PORT'] = str(self.port)
+
+        args = [str(executable), str(server_path)]
+        self.session_process = Popen(args, env=envvars)
+    
+    def is_alive(self):
+        return self.session_process.poll() is None
+
+    def stop(self):
+        if self.session_process.is_alive():
+            self.session_process.terminate()
+
+class MatchManager():
+
+    def __init__(self, baseport):
+        self.matches:dict[MatchSession] = {}
+        self.baseport = baseport
+    
+    def create_match(self, userid):
+        avail_port = self.find_avail_port()
+        match = MatchSession(avail_port, userid)
+
+        self.matches[avail_port] = match
+
+        match.create_process()
+
+    def find_avail_port(self):
+        ports = self.matches.keys()
+        currPort = self.baseport
+
+        # Terrible, but search for available ports
+        while currPort in ports:
+            currPort = currPort + 1
+        
+        return currPort
+
+
+    def destroy_match(self, match_port):
+        match: MatchSession = None
+        try:
+            match = self.matches[match_port]
+        except KeyError:
+            logging.error("Match doesnt exist")
+            return
+
+        match.stop()
+        self.matches.pop(match_port, None)
+
+match_manager = MatchManager(9001) # This will start all game sessions at port 9001, and going up
 
 mail = Mail()
 
@@ -100,9 +177,10 @@ def _safe_fetch_json_credentials(json_req):
     if not ((username is None) and (password is None) and (email is None)):
         return UserModel(username, password, email)
 
-@app.route("/")
-def hello_world():
-    return ""
+@app.route("/create_match")
+def create_match():
+    match_manager.create_match("ARoomba")
+    return "started",200
 
 @app.route('/api/v1', methods=["GET"])
 def info_view():

@@ -138,7 +138,7 @@ class SessionHandler(protocol.Protocol):
             message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
             self.session_queue().put(message_wrapper, True, QUEUE_TIMEOUT)
         except KeyError:
-            logging.warn("Session is not ready to accept messages (must complete handshake)")
+            logging.warning("Session is not ready to accept messages (must complete handshake)")
 
 class SessionHandlerFactory(protocol.Factory):
 
