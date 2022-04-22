@@ -226,6 +226,19 @@ def _safe_fetch_json_credentials(json_req):
         return UserModel(username, password, email)
 
 
+def _safe_fetch_json_login_credentials(json_req):
+    username = None
+    password = None
+    req_content = request.get_json()
+    try:
+        username = req_content['username']
+        password = req_content['password']
+    except KeyError:
+        return
+    if not ((username is None) and (password is None)):
+        return UserModel(username, password, None)
+
+
 def _safe_decode_token(request):
     token = request.args.get('token')
     try:
@@ -327,7 +340,7 @@ def register_user():
 
 @app.route("/login", methods=["POST"])
 def authenticate_route():
-    credentials = _safe_fetch_json_credentials(request.get_json())
+    credentials = _safe_fetch_json_login_credentials(request.get_json())
 
     # TODO probably should return some sort of JSON error object here
     if credentials.username is None:
@@ -346,7 +359,7 @@ def authenticate_route():
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=600),
             },
                 app.config['SECRET_KEY'])
-            return jsonify({'token': token})
+            return jsonify({'token': token, 'username': userLogin.username})
         else:
             return("Login Information is Not Valid"), 403
 
