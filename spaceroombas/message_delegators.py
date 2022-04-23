@@ -1,6 +1,6 @@
 from typing import List
 from data import messages
-from data.state import GameState, PlayerExistsError, RobotMoveEvent
+from data.state import GameState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent
 import logging
 
 # ---------------------------
@@ -62,12 +62,29 @@ class PlayerFirmwareChangeDelegator(MessageDelegator):
             robot = game_state.get_player_robots(player)
             for k, v in robot.items():
                 # At this point, this should be a robot object
-                v.set_firmware(message.code)
+                try:
+                    v.set_firmware(message.code)
+                except:
+                    err = f"Robot {player}:{v.robot_id} had syntax error"
+                    logging.info(err)
+                    self.add_robot_error(game_state, player, v.robot_id)
+                    break
         else:
             robot = game_state.get_robot(player, robot_id)
-            robot.set_firmware(message.code)
+            try:
+                robot.set_firmware(message.code)
+            except:
+                err = f"Robot {player}:{robot_id} had syntax error"
+                logging.info(err)
+                self.add_robot_error(game_state, player, robot_id, err)
+
         logging.debug("Applied firmware change for \"%s:%s\"" %
                       (player, robot_id))
+
+    def add_robot_error(self, game_state, player_id, robot_id, err):
+        player = game_state.players[player_id]
+        player.add_state_change_event(
+            RobotErrorEvent(player_id, robot_id, err))
 
 
 delegators = {
@@ -111,8 +128,23 @@ class RobotMoveEventDelegator():
         network.enque_message(None, network_message)
 
 
+class RobotErrorEventDelegator():
+    def delegate(self, network, event):
+        network_message = messages.PlayerRobotErrorMessage(
+            event.player_id, event.robot_id, event.error)
+        logging.debug("Robot \"%s\":\"%s\" Errror: %s"
+                      % (
+                          event.player_id,
+                          event.robot_id,
+                          event.error
+                      ))
+
+        network.enque_message(event.player_id, network_message)
+
+
 event_delegators = {
-    RobotMoveEvent: RobotMoveEventDelegator()
+    RobotMoveEvent: RobotMoveEventDelegator(),
+    RobotErrorEvent: RobotErrorEventDelegator(),
 }
 
 

@@ -24,6 +24,14 @@ class RobotMoveEvent:
         self.new = new_location
 
 
+class RobotErrorEvent:
+
+    def __init__(self, player_id, robot_id, error) -> None:
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.error = error
+
+
 class MapSector:
     def __init__(self, sector_id) -> None:
         # TODO update map to hold more information...
@@ -235,11 +243,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
     def set_firmware(self, code):
         self.firmware = code
-        try:
-            self.init_interpreter()
-        except:
-            logging.info(
-                f"Robot {self.owner}:{self.robot_id} had syntax error")
+        self.init_interpreter()
 
     def set_bound_functions(self, fns: dict):
         if type(fns) != dict:
@@ -316,7 +320,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
         if state.map.check_tile_available(new_pos) and self.resources >= 1:
             self.resources -= 1
-            state.add_robot(self.owner, new_pos)
+            state.add_robot(self.owner, new_pos).set_firmware(self.firmware)
 
 
 class PlayerState:
