@@ -9,16 +9,19 @@ import logging
 #
 # ---------------------------
 
+
 class MessageDelegator:
 
     def delegate(self, messageWrapper, game_state, network):
         raise NotImplementedError
+
 
 class MapUpdateRequestMessageDelegator(MessageDelegator):
 
     def delegate(self, messageWrapper, game_state, network):
         map_sector = game_state.map.get_sector('0,0')
         network.enque_message(messageWrapper.client, map_sector)
+
 
 class NewConnectionDelegator(MessageDelegator):
 
@@ -38,13 +41,12 @@ class NewConnectionDelegator(MessageDelegator):
             # In which, we want EVERYONE to know
             robots = game_state.get_all_robots()
             if len(robots) > 0:
-                network.enque_message(messageWrapper.client, 
-                messages.RobotListingMessage(robots))
+                network.enque_message(messageWrapper.client,
+                                      messages.RobotListingMessage(robots))
 
         # Send a map
         map_sector = game_state.map.get_sector('0,0')
         network.enque_message(messageWrapper.client, map_sector)
-
 
 
 class PlayerFirmwareChangeDelegator(MessageDelegator):
@@ -58,20 +60,22 @@ class PlayerFirmwareChangeDelegator(MessageDelegator):
         if robot_id is None:
             # Apply to all player robots
             robot = game_state.get_player_robots(player)
-            for k,v in robot.items():
+            for k, v in robot.items():
                 # At this point, this should be a robot object
                 v.set_firmware(message.code)
         else:
             robot = game_state.get_robot(player, robot_id)
             robot.set_firmware(message.code)
-        logging.debug("Applied firmware change for \"%s:%s\"" % (player, robot_id))
-            
+        logging.debug("Applied firmware change for \"%s:%s\"" %
+                      (player, robot_id))
+
 
 delegators = {
-    messages.MapUpdateRequestMessage:MapUpdateRequestMessageDelegator(),
-    messages.NewConnectionMessage:NewConnectionDelegator(),
-    messages.PlayerFirmwareChange:PlayerFirmwareChangeDelegator(),
+    messages.MapUpdateRequestMessage: MapUpdateRequestMessageDelegator(),
+    messages.NewConnectionMessage: NewConnectionDelegator(),
+    messages.PlayerFirmwareChange: PlayerFirmwareChangeDelegator(),
 }
+
 
 def delegate_client_message(messageWrapper, game_state, network):
     msg_type = type(messageWrapper.message)
@@ -79,7 +83,8 @@ def delegate_client_message(messageWrapper, game_state, network):
     try:
         delegator = delegators[msg_type]
     except KeyError:
-        logging.info("Failed delegating message (do not have a handler for that message)")
+        logging.info(
+            "Failed delegating message (do not have a handler for that message)")
         return
 
     delegator.delegate(messageWrapper, game_state, network)
@@ -94,20 +99,22 @@ def delegate_client_message(messageWrapper, game_state, network):
 
 class RobotMoveEventDelegator():
     def delegate(self, network, event):
-        network_message = messages.PlayerRobotMoveMessage(event.player_id, event.robot_id, event.new.x, event.new.y)
-        logging.debug("Robot \"%s\":\"%s\" moved: %s -> %s" 
-        % (
-        event.player_id, 
-        event.robot_id, 
-        event.new, event.old
-        ))
+        network_message = messages.PlayerRobotMoveMessage(
+            event.player_id, event.robot_id, event.new.x, event.new.y)
+        logging.debug("Robot \"%s\":\"%s\" moved: %s -> %s"
+                      % (
+                          event.player_id,
+                          event.robot_id,
+                          event.old, event.new
+                      ))
 
         network.enque_message(None, network_message)
 
 
 event_delegators = {
-    RobotMoveEvent:RobotMoveEventDelegator()
+    RobotMoveEvent: RobotMoveEventDelegator()
 }
+
 
 def delegate_state_changes(events: list, network):
     delegator = None
@@ -119,21 +126,23 @@ def delegate_state_changes(events: list, network):
         except KeyError:
             logging.info("Cannot send this message out yet")
 
+
 def delegate_notify_new_robots(game_state: GameState, network):
     robots = game_state.check_for_new_robots()
 
     if robots is not None:
         network.enque_message(None, messages.RobotListingMessage(robots))
 
+
 def delegate_server_messages(game_state: GameState, network):
     state_changes = list()
 
     # Notify on new robots
     delegate_notify_new_robots(game_state, network)
-    
+
     # Check for player state events
     for player in game_state.players.values():
         state_changes.extend(player.get_list_state_change_events())
-    
+
     if len(state_changes) > 0:
         delegate_state_changes(state_changes, network)
