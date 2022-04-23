@@ -97,7 +97,7 @@ class MapState:
 
     def get_sector(self, sector_id):
         if self.__sectors.get(sector_id) is None:
-            logging.warn("couldnt find sector: %s" % (sector_id))
+            logging.warning("couldnt find sector: %s" % (sector_id))
             return None
         else:
             return self.__sectors[sector_id]
@@ -117,7 +117,7 @@ class MapState:
             return True
 
         else:
-            logging.warn("Sector already exists: %s" % (sector_id))
+            logging.warning("Sector already exists: %s" % (sector_id))
             return False
 
     def update_walkable(self, location: EntityLocation, walkable):
@@ -370,7 +370,7 @@ class GameState:
     def add_robot(self, player_id, location: EntityLocation):
         robot = None
         if self.players.get(player_id) is None:
-            logging.warn("invalid player id to add robot to")
+            logging.warning("invalid player id to add robot to")
             return False
         else:
             robot = self.players[player_id].add_robot(location)
@@ -396,7 +396,7 @@ class GameState:
         try:
             player = self.players[player_id]
         except KeyError:
-            logging.warn("Player '%s' doesnt exist" % (player_id))
+            logging.warning("Player '%s' doesnt exist" % (player_id))
             return None
         return player.robots
 
@@ -427,6 +427,7 @@ class GameState:
 
         # Check co-ord params and set current location (no change in that co-ord)
         if dx == 0 and dy == 0:
+
             logging.warn(
                 "Robot move got bad location delta: X: %s Y: %s" % (dx, dy))
             return False

@@ -215,11 +215,11 @@ def map_carrier(carrier_dict):
         try:
             carrier_payload = mapper.map(carrier_dict['payload'])
         except KeyError:
-            logging.warn("Carrier payload has missing key")
+            logging.warning("Carrier payload has missing key")
             carrier_payload = None
             payload_type = "invalid"
     except KeyError:
-        logging.warn("Mapper doesn't exist for payload type")
+        logging.warning("Mapper doesn't exist for payload type")
         carrier_payload = None
         payload_type = "invalid"
 
