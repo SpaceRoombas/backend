@@ -56,6 +56,9 @@ class EntityLocation:
     def __str__(self):
         return "sec:" + self.sector.sector_id + " x,y:" + str(self.x) + "," + str(self.y)
 
+    def get_sector_id(self):
+        return self.sector.sector_id
+
 
 class MapState:
 
@@ -63,6 +66,34 @@ class MapState:
         # Generate first map sector
         self.__sectors = dict()
         self.generate_map_sector("0,0")
+
+    def resolve_location(location: EntityLocation):
+        x = location.x
+        y = location.y
+
+        xMax = 49
+        yMax = 49
+
+        starting_sector_id = location.sector.sector_id
+        sec_x, sec_y = MapSector.parse_id(starting_sector_id)
+
+        if x < 0:  # move left
+            sec_x -= 1
+            x = xMax
+        elif y < 0:  # move up
+            sec_y += 1
+            y = yMax
+        elif x > xMax:  # move right
+            sec_x += 1
+            x = 0
+        elif y > yMax:  # move down
+            sec_y -= 1
+            y = 0
+        else:
+            return location, False
+
+        new_sector_id = MapSector.form_sector_id(sec_x, sec_y)
+        return EntityLocation(new_sector_id, x, y), True
 
     def connect_sectors(self, sector1id, sector2id):
         if self.__sectors.get(sector1id) is not None and self.__sectors.get(sector2id) is not None:
@@ -106,19 +137,30 @@ class MapState:
         logging.info(len(self.__sectors.keys()))
         return len(self.__sectors.keys())
 
-    def generate_map_sector(self, sector_id):
-        if self.__sectors.get(sector_id) is None:
-            self.__sectors[sector_id] = MapSector(sector_id)
-            x, y = MapSector.parse_id(sector_id)
-            self.connect_sectors(sector_id, MapSector.form_sector_id(x + 1, y))
-            self.connect_sectors(sector_id, MapSector.form_sector_id(x - 1, y))
-            self.connect_sectors(sector_id, MapSector.form_sector_id(x, y + 1))
-            self.connect_sectors(sector_id, MapSector.form_sector_id(x, y - 1))
-            return True
+    def generate_map_sector(self, center_sector_id):
+        def make_sector(sector_id):
+            if self.__sectors.get(sector_id) is None:
+                self.__sectors[sector_id] = MapSector(sector_id)
+                x, y = MapSector.parse_id(sector_id)
+                self.connect_sectors(
+                    sector_id, MapSector.form_sector_id(x + 1, y))
+                self.connect_sectors(
+                    sector_id, MapSector.form_sector_id(x - 1, y))
+                self.connect_sectors(
+                    sector_id, MapSector.form_sector_id(x, y + 1))
+                self.connect_sectors(
+                    sector_id, MapSector.form_sector_id(x, y - 1))
+                logging.debug("Make new sector: %s" % (sector_id))
+                return True
+            else:
+                logging.warning("Sector already exists: %s" % (sector_id))
+                return False
 
-        else:
-            logging.warning("Sector already exists: %s" % (sector_id))
-            return False
+        x, y = MapSector.parse_id(center_sector_id)
+        sec_delta = [(-1, 1), (0, 1), (1, 1), (-1, 0), (0, 0),
+                     (1, 0), (-1, -1), (0, -1), (1, -1)]
+        for sec_d in sec_delta:
+            make_sector(MapSector.form_sector_id(x+sec_d[0], y+sec_d[1]))
 
     def update_walkable(self, location: EntityLocation, walkable):
         current_sector = self.get_sector(location.sector.sector_id)
@@ -427,13 +469,16 @@ class GameState:
 
         # Check co-ord params and set current location (no change in that co-ord)
         if dx == 0 and dy == 0:
-
             logging.warn(
                 "Robot move got bad location delta: X: %s Y: %s" % (dx, dy))
             return False
 
         wantedLocation = EntityLocation(
             robot.location.sector, robot.location.x + dx, robot.location.y + dy)
+        wantedLocation, changed = MapState.resolve_location(wantedLocation)
+
+        if changed:  # if new sector... make new sector on map
+            self.map.generate_map_sector(wantedLocation.get_sector_id())
 
         if self.map.check_tile_available(wantedLocation):
             # Add event
