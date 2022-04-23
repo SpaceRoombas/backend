@@ -1,6 +1,7 @@
 from flask import Flask, flash
 from flask import jsonify
 from flask import request
+from flask import g
 from flask import url_for
 from flask import render_template
 from flask_sqlalchemy import SQLAlchemy
@@ -148,19 +149,42 @@ mail.init_app(app)
 db = SQLAlchemy(app)
 
 
-def token_required(func):  # May not be needed, depending on what else we use tokens for
+def _error_invalid_token():
+    return jsonify({
+        'message': 'Token is invalid'
+    }), 403
+
+
+def resolve_auth_token():
+    token = None
+    # Try auth header first
+    authorization_header = request.headers.get('Authorization')
+    # Considering the format 'Bearer <token>'
+    auth_parts = authorization_header.split(' ')
+
+    if len(auth_parts) > 1:
+        token = auth_parts[1]
+
+    # Give the token query param a try
+    if token is None:
+        token = request.args.get('token')
+
+    return token
+
+
+def token_required(func):
     @wraps(func)
     def decorated(*args, **kwargs):
-        token = request.args.get('token')
+        token = resolve_auth_token()
+
         if not token:
-            return jsonify({'message': 'Token is missing'})
+            return _error_invalid_token()
         try:
-            data = jwt.decode(
+            # Store the auth token in globals so we can use it later
+            g.auth_token = jwt.decode(
                 token, app.config['SECRET_KEY'], algorithms=['HS256'])
         except:
-            return jsonify({
-                'message': 'Token is invalid'
-            })
+            return _error_invalid_token()
         return func(*args, **kwargs)
     return decorated
 
@@ -239,29 +263,13 @@ def _safe_fetch_json_login_credentials(json_req):
         return UserModel(username, password, None)
 
 
-def _safe_decode_token(request):
-    token = request.args.get('token')
-    try:
-        return jwt.decode(
-            token, app.config['SECRET_KEY'], algorithms=['HS256'])
-    except:
-        return None
-
-
 @app.route("/joinmatch")
 @token_required
 def join_match():
-    claims = _safe_decode_token(request)
+    claims = g.auth_token
     match = None
     connection_map = None
-
-    # claims guard
-    if claims is None:
-        return jsonify({
-            "error": "Invalid token"
-        }), 403
     username = claims['username']
-
     matches = match_manager.fetch_open_matches()
 
     # Find match without user
@@ -283,16 +291,10 @@ def join_match():
 @app.route("/fetchmatches")
 @token_required
 def fetch_match_list():
-    claims = _safe_decode_token(request)
+    claims = g.auth_token
     matches = list()
     connection_maps = []
     all_matches = match_manager.fetch_all_matches()
-
-    # claims guard
-    if claims is None:
-        return jsonify({
-            "error": "Invalid token"
-        }), 403
     username = claims['username']
 
     for possible in all_matches:
