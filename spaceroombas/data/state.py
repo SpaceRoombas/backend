@@ -65,9 +65,9 @@ class MapState:
     def __init__(self):
         # Generate first map sector
         self.__sectors = dict()
-        self.generate_map_sector("0,0")
+        # self.generate_map_sector("0,0")
 
-    def resolve_location(location: EntityLocation):
+    def resolve_location(self, location: EntityLocation):
         x = location.x
         y = location.y
 
@@ -93,7 +93,7 @@ class MapState:
             return location, False
 
         new_sector_id = MapSector.form_sector_id(sec_x, sec_y)
-        return EntityLocation(new_sector_id, x, y), True
+        return EntityLocation(self.get_sector(new_sector_id), x, y), True
 
     def connect_sectors(self, sector1id, sector2id):
         if self.__sectors.get(sector1id) is not None and self.__sectors.get(sector2id) is not None:
@@ -475,10 +475,10 @@ class GameState:
 
         wantedLocation = EntityLocation(
             robot.location.sector, robot.location.x + dx, robot.location.y + dy)
-        wantedLocation, changed = MapState.resolve_location(wantedLocation)
+        wantedLocation, changed = self.map.resolve_location(wantedLocation)
 
         if changed:  # if new sector... make new sector on map
-            self.map.generate_map_sector(wantedLocation.get_sector_id())
+            self.map.generate_map_sector(wantedLocation.sector.sector_id)
 
         if self.map.check_tile_available(wantedLocation):
             # Add event
