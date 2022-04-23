@@ -272,13 +272,8 @@ def join_match():
     if match is None:
         # Open match not found, add player to new match
         match = match_manager.create_match(username)
-
-    try:
+    else:
         match.add_user(username)
-    except:
-        return jsonify({
-            "error": "Player already in match"
-        }), 500
 
     connection_map = match.get_match_details()
 
