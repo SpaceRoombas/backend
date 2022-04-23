@@ -64,7 +64,7 @@ class MatchSession():
     def get_match_details(self):
         return {
             "host": self.host,
-            "post": self.port,
+            "port": self.port,
             "players": self.players
         }
 
@@ -285,7 +285,7 @@ def join_match():
 
     connection_map = match.get_match_details()
 
-    return jsonify({'match_details': connection_map}), 200
+    return jsonify(connection_map), 200
 
 
 @app.route("/fetchmatches")
@@ -312,14 +312,14 @@ def register_user():
     credentials = _safe_fetch_json_credentials(request.get_json())
 
     if len(credentials.username) > 15:
-        return("Username exceeds 15 characters"), 400
+        return jsonify({"error": "Username exceeds 15 characters"}), 400
     if len(credentials.password) > 20:
-        return("Password exceeds 20 characters"), 400
+        return jsonify({"error": "Password exceeds 20 characters"}), 400
 
     newUser = UserDbInfo(username=credentials.username,
                          password=credentials.hashed_password, email=credentials.email)
 
-    if not(credentials is None):
+    if not(credentials.username is None):
         newUser = UserDbInfo.query.filter_by(email=credentials.email).first()
         if newUser is None:
             newUser = UserDbInfo(username=credentials.username,
@@ -328,11 +328,11 @@ def register_user():
             try:
                 db.session.commit()
             except IntegrityError:
-                return "Username already exists", 400
+                return jsonify({"error": "Username already Exists"}), 400
             return jsonify({"status": "registered"})
         else:
-            return("User already exists"), 400
-    return("Please insert a username and password"), 400
+            return jsonify({"error": "User already Exists"}), 400
+    return jsonify({"error": "Missing username or password"}), 400
 
 
 @app.route("/login", methods=["POST"])
