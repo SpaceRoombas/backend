@@ -1,6 +1,7 @@
 from .state import MapSector, PlayerRobot, EntityLocation
 from . import messages
-from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage
+from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage, \
+    PlayerRobotErrorMessage
 
 from json import JSONEncoder, dumps as json_string, loads as load_json
 import logging
@@ -120,6 +121,15 @@ class RobotMoveMessageEncoder(JSONEncoder):
         }
 
 
+class RobotErrorMessageEncoder(JSONEncoder):
+    def default(self, obj):
+        return {
+            "player_id": obj.player_id,
+            "robot_id": obj.robot_id,
+            "error": obj.error
+        }
+
+
 class RobotListingEncoder(JSONEncoder):
     def default(self, obj: messages.RobotListingMessage):
         return {
@@ -192,6 +202,7 @@ obj_encoders = {
     MapSector: MapSectorEncoder,
     PlayerFirmwareChange: PlayerFirmwareChangeEncoder,
     PlayerRobotMoveMessage: RobotMoveMessageEncoder,
+    PlayerRobotErrorMessage: RobotErrorMessageEncoder,
     messages.RobotListingMessage: RobotListingEncoder,
     PlayerRobot: PlayerRobotEncoder,
     EntityLocation: EntityLocationEncoder,
