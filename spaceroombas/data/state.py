@@ -201,11 +201,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
     def set_firmware(self, code):
         self.firmware = code
-        try:
-            self.init_interpreter()
-        except:
-            logging.info(
-                f"Robot {self.owner}:{self.robot_id} had syntax error")
+        self.init_interpreter()
 
     def set_bound_functions(self, fns: dict):
         if type(fns) != dict:
