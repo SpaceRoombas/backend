@@ -1,5 +1,5 @@
 from random import shuffle
-from data.state import GameState
+from data.state import GameState, RobotErrorEvent
 import client_networking
 from twisted.internet.task import LoopingCall
 from roombalang.exceptions import LangException
@@ -29,6 +29,7 @@ def tick_bots(game_state: GameState):
             bot.tick()
         except LangException as e:
             logging.info(f"Player {bot.owner} code had exception: {e}!")
+            game_state.players[bot.owner].add_state_change_event(RobotErrorEvent(bot.owner, bot.robot_id, e))
 
 
 def game_loop(game_state: GameState, network):
