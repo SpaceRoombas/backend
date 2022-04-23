@@ -1,6 +1,6 @@
 from typing import List
 from data import messages
-from data.state import GameState, PlayerExistsError, RobotMoveEvent
+from data.state import GameState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent
 import logging
 
 # ---------------------------
@@ -104,9 +104,22 @@ class RobotMoveEventDelegator():
 
         network.enque_message(None, network_message)
 
+class RobotErrorEventDelegator():
+    def delegate(self, network, event):
+        network_message = messages.PlayerRobotErrorMessage(event.player_id, event.robot_id, event.error)
+        logging.debug("Robot \"%s\":\"%s\" Errror: %s"
+        % (
+        event.player_id,
+        event.robot_id,
+        event.error
+        ))
+
+        network.enque_message(event.player_id, network_message)
+
 
 event_delegators = {
-    RobotMoveEvent:RobotMoveEventDelegator()
+    RobotMoveEvent: RobotMoveEventDelegator(),
+    RobotErrorEvent: RobotErrorEventDelegator(),
 }
 
 def delegate_state_changes(events: list, network):
