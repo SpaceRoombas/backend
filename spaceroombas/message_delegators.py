@@ -1,6 +1,7 @@
 from typing import List
 from data import messages
-from data.state import GameState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent
+from data.state import GameState, MapState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent
+from data.util import debounce
 import logging
 
 # ---------------------------
@@ -171,11 +172,30 @@ def delegate_notify_new_robots(game_state: GameState, network):
         network.enque_message(None, messages.RobotListingMessage(robots))
 
 
+@debounce(0.25)  # debounce by 250ms
+def delegate_send_mapsectors(map_state: MapState, network):
+    map_sectors = list()
+    map_sector_ids = map_state.flush_pending_sector_updates()
+
+    for id in map_sector_ids:
+        map_sectors.append(map_state.get_sector(id))
+
+    network.enque_message(None, messages.MapSectorListing(map_sectors))
+
+
 def delegate_server_messages(game_state: GameState, network):
     state_changes = list()
 
     # Notify on new robots
     delegate_notify_new_robots(game_state, network)
+
+    # Check map sector changes
+    # NOTE: There could be a race condition here between when a player joins
+    # and when there is a map sector update. Essentially, players could join
+    # as there is a map sector update, causing players to not recieve maps
+    # Or when two robots trigger generation of two sectors
+    if game_state.map.has_sector_updates():
+        delegate_send_mapsectors(game_state.map, network)
 
     # Check for player state events
     for player in game_state.players.values():

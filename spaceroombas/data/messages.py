@@ -70,3 +70,9 @@ class RobotListingMessage:
     def __init__(self, bots=[]) -> None:
         self.num_bots = len(bots)
         self.robots = bots
+
+
+class MapSectorListing:
+
+    def __init__(self, sectors):
+        self.map_sectors = sectors

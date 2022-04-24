@@ -159,6 +159,13 @@ class PlayerRobotEncoder(JSONEncoder):
         }
 
 
+class MapSectorListingEncoder(JSONEncoder):
+    def default(self, obj: messages.MapSectorListing):
+        return {
+            "map_sectors": obj.map_sectors
+        }
+
+
 class JsonEncodingDelegator(JSONEncoder):
 
     def __init__(self, encoders) -> None:
@@ -208,6 +215,7 @@ obj_encoders = {
     messages.RobotListingMessage: RobotListingEncoder,
     PlayerRobot: PlayerRobotEncoder,
     EntityLocation: EntityLocationEncoder,
+    messages.MapSectorListing: MapSectorListingEncoder
 }
 
 

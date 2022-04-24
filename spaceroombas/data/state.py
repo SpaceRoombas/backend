@@ -54,10 +54,6 @@ class MapSector:
 class EntityLocation:
 
     def __init__(self, sector, x, y) -> None:
-        # TODO This references the whole sector object, when really it should be a sector id
-        # Consider setting this as sector ID. The rest of the logic that uses this location class
-        # Assumes this will return a MapSector.
-        # When updating this, make sure to adjust EntityLocationEncoder in serialization.py
         self.sector = sector
         self.x = x
         self.y = y
@@ -74,7 +70,8 @@ class MapState:
     def __init__(self):
         # Generate first map sector
         self.__sectors = dict()
-        # self.generate_map_sector("0,0")
+        # NOTE: This queue contains sector_id's
+        self.__pending_sector_updates = Queue()
 
     def resolve_location(self, location: EntityLocation):
         x = location.x
@@ -159,6 +156,7 @@ class MapState:
                     sector_id, MapSector.form_sector_id(x, y + 1))
                 self.connect_sectors(
                     sector_id, MapSector.form_sector_id(x, y - 1))
+                self.__pending_sector_updates.put(sector_id)
                 logging.debug("Make new sector: %s" % (sector_id))
                 return True
             else:
@@ -204,6 +202,17 @@ class MapState:
             current_sector.land_map[location.x][location.y][1] = True
             return True
         return False
+
+    def flush_pending_sector_updates(self):
+        updates = list()
+
+        while not self.__pending_sector_updates.empty():
+            updates.append(self.__pending_sector_updates.get())
+
+        return updates
+
+    def has_sector_updates(self):
+        return self.__pending_sector_updates.qsize() > 0
 
 
 class GameObject:  # TODO game object... we can have buildings ext
