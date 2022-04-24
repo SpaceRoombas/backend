@@ -11,7 +11,7 @@ from data import serialization
 from data.messages import NewConnectionMessage
 
 QUEUE_TIMEOUT = 0.3
-QUEUE_FLUSH_RATE = 1
+QUEUE_FLUSH_RATE = 200
 
 immediates = [
     'invalid',

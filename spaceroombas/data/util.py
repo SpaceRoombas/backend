@@ -8,7 +8,7 @@ def create_interpreter_function_bindings(game_state, bot):
     left = (lambda args: game_state.move_robot_left(bot.owner, bot.robot_id), 0)
     right = (lambda args: game_state.move_robot_right(
         bot.owner, bot.robot_id), 0)
-    move = (lambda args: [up, left, down, right][args[0][0]][0]([]), 1)
+    move = (lambda args: [up, right, down, left][args[0][0]][0]([]), 1)
     terraform = (lambda args: bot.terraform(game_state), 0)
     mine = (lambda args: bot.mine(game_state, args[0][0]), 1)
     look = (lambda args: bot.look(game_state, args[0][0]), 1)

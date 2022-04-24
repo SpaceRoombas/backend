@@ -9,7 +9,7 @@ from os import environ
 import message_delegators
 
 # Tunables
-GAME_LOOP_DELTA = 0.5
+GAME_LOOP_DELTA = 0.15
 NETWORK_UPDATE_DELTA = 0.1
 
 LOGLEVEL = environ.get('LOGGING', 'WARNING').upper()

@@ -330,7 +330,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
         if state.map.check_tile_available(new_pos) and self.resources >= 1:
             self.resources -= 1
-            state.add_robot(self.owner, new_pos).set_firmware(self.firmware)
+            state.players[self.owner].add_robot(
+                self.owner, new_pos).set_firmware(self.firmware)
 
 
 class PlayerState:
