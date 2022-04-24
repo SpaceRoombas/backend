@@ -129,7 +129,8 @@ class RobotMineMessageEncoder(JSONEncoder):
             "player_id": obj.player_id,
             "robot_id": obj.robot_id,
             "mined_x": obj.mined_x,
-            "mined_y": obj.mined_y
+            "mined_y": obj.mined_y,
+            "sector_id": obj.sector_id
         }
 
 

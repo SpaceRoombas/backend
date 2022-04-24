@@ -27,11 +27,12 @@ class RobotMoveEvent:
 
 class RobotMineEvent:
 
-    def __init__(self, player_id, robot_id, x, y):
+    def __init__(self, player_id, robot_id, sector_id, x, y):
         self.player_id = player_id
         self.robot_id = robot_id
         self.mined_x = x
         self.mined_y = y
+        self.sector_id = sector_id
 
 
 class RobotErrorEvent:
@@ -248,7 +249,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         self.owner = owner_id
         self.robot_id = "r" + str(self.robot_count)
         PlayerRobot.robot_count += 1
-        self.location = location
+        self.location: EntityLocation = location
         self.firmware = None
         self.parser = parser
         self.transpiler = transpiler
@@ -308,7 +309,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         if state.map.mine_tile(mine_pos):
             self.resources += 1
             state.players[self.owner].add_state_change_event(
-                RobotMineEvent(self.owner, self.robot_id, mine_pos.x, mine_pos.y))
+                RobotMineEvent(self.owner, self.robot_id, mine_pos.get_sector_id(), mine_pos.x, mine_pos.y))
 
     def look(self, state, direction):
         """returns id of tile type, -2 if map edge, or -1 if robot"""

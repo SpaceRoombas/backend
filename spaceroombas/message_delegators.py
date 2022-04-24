@@ -140,7 +140,7 @@ class RobotMoveEventDelegator():
 class RobotMineEventDelegator():
     def delegate(self, network, event):
         network_message = messages.PlayerRobotMineMessage(
-            event.player_id, event.robot_id, event.mined_x, event.mined_y)
+            event.player_id, event.robot_id, event.mined_x, event.mined_y, event.sector_id)
 
         logging.debug("Robot \"%s\":\"%s\" mined: %s, %s"
                       % (
