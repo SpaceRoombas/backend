@@ -299,11 +299,11 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
             self.location.sector, self.location.x, self.location.y)
 
         if direction == 0:
-            mine_pos.y += 1
+            mine_pos.y -= 1
         elif direction == 1:
             mine_pos.x += 1
         elif direction == 2:
-            mine_pos.y -= 1
+            mine_pos.y += 1
         else:
             mine_pos.x -= 1
 
