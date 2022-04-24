@@ -132,6 +132,9 @@ class MapState:
     def get_sector_ids(self):
         return list(self.__sectors.keys())
 
+    def get_sectors(self):
+        return self.__sectors.values()
+
     def get_sector(self, sector_id):
         if self.__sectors.get(sector_id) is None:
             logging.warning("couldnt find sector: %s" % (sector_id))
@@ -372,6 +375,12 @@ class GameState:
         self.NEW_ROBOT_FLAG = False
 
     def add_player(self, player_id):
+
+        # Sanity checks
+        if player_id in self.players:
+            raise PlayerExistsError("Player already exists")
+
+        # Change state AFTER sanity checks
         x, y = self.choose_spawn_sector()
         sector_id = MapSector.form_sector_id(x, y)
 
@@ -380,9 +389,6 @@ class GameState:
 
         playerState = PlayerState(
             player_id, sector, self.parser, self.transpiler)
-
-        if player_id in self.players:  # TODO implement logic here for orphan clients
-            raise PlayerExistsError("Player already exists")
 
         self.players[player_id] = playerState
 
