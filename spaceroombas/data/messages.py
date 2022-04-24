@@ -94,3 +94,10 @@ class MapSectorListing:
 
     def __init__(self, sectors):
         self.map_sectors = sectors
+
+
+class RobotFirmwareMessage:
+
+    def __init__(self, robot_id, firmware):
+        self.robot_id = robot_id
+        self.firmware = firmware

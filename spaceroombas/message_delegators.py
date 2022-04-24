@@ -1,7 +1,7 @@
 from typing import List
 from data import messages
 from data.state import GameState, MapState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent, ScoreUpdateEvent, \
-    RobotMineEvent
+    RobotMineEvent, RobotBirthEvent
 from data.util import debounce
 import logging
 
@@ -32,25 +32,30 @@ class NewConnectionDelegator(MessageDelegator):
         # Send map for player location
 
         message = messageWrapper.message
-        robots = None
         map_sectors = None
 
         try:
             game_state.add_player(message.client_id)
         except PlayerExistsError:
             logging.info("Got orphaned player: %s" % (message.client_id))
-            # Send robots. This happens on new players, because the creation
-            # of their first robot will trigger a list send.
-            # In which, we want EVERYONE to know
-            robots = game_state.get_all_robots()
-            if len(robots) > 0:
-                network.enque_message(messageWrapper.client,
-                                      messages.RobotListingMessage(robots))
+
+        # Send exisiting player firmwares
+        firmwares: dict = game_state.players[message.client_id].get_robot_firmwares(
+        )
+
+        for roboid, firmware in firmwares.items():
+            network.enque_message(message.client_id, messages.PlayerFirmwareChange(
+                firmware, message.client_id, roboid))
 
         # Send all map sectors
         map_sectors = list(game_state.map.get_sectors())
         network.enque_message(messageWrapper.client,
                               messages.MapSectorListing(map_sectors))
+
+        # Send player scores
+        for player_id, player in game_state.players.items():
+            network.enque_message(messageWrapper.client,
+                                  messages.ScoreUpdateMessage(player_id, None, player.score))
 
 
 class PlayerFirmwareChangeDelegator(MessageDelegator):
@@ -137,6 +142,15 @@ class RobotMoveEventDelegator():
         network.enque_message(None, network_message)
 
 
+class RobotBirthDelegator():
+    def delegate(self, network, event: RobotBirthEvent):
+
+        network_message = messages.PlayerFirmwareChange(
+            event.robot.firmware, event.player, event.robot.robot_id)
+
+        network.enque_message(event.player, network_message)
+
+
 class RobotMineEventDelegator():
     def delegate(self, network, event):
         network_message = messages.PlayerRobotMineMessage(
@@ -185,7 +199,8 @@ event_delegators = {
     RobotMoveEvent: RobotMoveEventDelegator(),
     RobotErrorEvent: RobotErrorEventDelegator(),
     RobotMineEvent: RobotMineEventDelegator(),
-    ScoreUpdateEvent: ScoreUpdateEventDelegator()
+    ScoreUpdateEvent: ScoreUpdateEventDelegator(),
+    RobotBirthEvent: RobotBirthDelegator()
 }
 
 
@@ -207,7 +222,7 @@ def delegate_notify_new_robots(game_state: GameState, network):
         network.enque_message(None, messages.RobotListingMessage(robots))
 
 
-@debounce(0.25)  # debounce by 250ms
+@ debounce(0.25)  # debounce by 250ms
 def delegate_send_mapsectors(map_state: MapState, network):
     map_sectors = list()
     map_sector_ids = map_state.flush_pending_sector_updates()
@@ -220,9 +235,6 @@ def delegate_send_mapsectors(map_state: MapState, network):
 
 def delegate_server_messages(game_state: GameState, network):
     state_changes = list()
-
-    # Notify on new robots
-    delegate_notify_new_robots(game_state, network)
 
     # Check map sector changes
     # NOTE: There could be a race condition here between when a player joins

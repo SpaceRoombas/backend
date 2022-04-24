@@ -15,6 +15,13 @@ class PlayerExistsError(RuntimeError):
 
 # Various state change events
 
+class RobotBirthEvent:
+
+    def __init__(self, playerid, robot) -> None:
+        self.player = playerid
+        self.robot = robot
+
+
 class RobotMoveEvent:
 
     def __init__(self, player_id, robot_id, old_location, new_location) -> None:
@@ -373,10 +380,19 @@ class PlayerState:
         robot = PlayerRobot(self.player_id, location,
                             self.parser, self.transpiler)
         self.robots[robot.robot_id] = robot
+        self.add_state_change_event(RobotBirthEvent(self.player_id, robot))
         return robot
 
     def add_state_change_event(self, change_event):
         self.change_events.put(change_event)
+
+    def get_robot_firmwares(self):
+        firmwares = dict()
+
+        for robot_id, robot in self.robots.items():
+            firmwares[robot_id] = robot.firmware
+
+        return firmwares
 
     def get_list_state_change_events(self):
         events = list()
@@ -393,7 +409,6 @@ class GameState:
         self.players = dict()
         self.parser = parser.Parser()
         self.transpiler = transpiler.Transpiler()
-        self.NEW_ROBOT_FLAG = False
 
     def add_player(self, player_id):
 
@@ -460,7 +475,6 @@ class GameState:
             robot = self.players[player_id].add_robot(location)
             self.__bind_robot_functions(robot)
             self.map.update_walkable(location, False)
-            self.NEW_ROBOT_FLAG = True
             return robot
 
     def __bind_robot_functions(self, robot: PlayerRobot):
@@ -483,11 +497,6 @@ class GameState:
             logging.warning("Player '%s' doesnt exist" % (player_id))
             return None
         return player.robots
-
-    def check_for_new_robots(self):
-        if self.NEW_ROBOT_FLAG == True:
-            self.NEW_ROBOT_FLAG = False
-            return self.get_all_robots()
 
     def get_all_robots(self):
         bots = [None] * PlayerRobot.robot_count
