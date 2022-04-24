@@ -53,6 +53,8 @@ class PlayerRobotMoveMessage:
         self.robot_id = robot_id
         self.x = x
         self.y = y
+        self.old = None
+        self.new = None
 
 
 class PlayerRobotErrorMessage:

@@ -22,6 +22,7 @@ class RobotMoveEvent:
         self.robot_id = robot_id
         self.old = old_location
         self.new = new_location
+        self.entity_location = None
 
 
 class RobotErrorEvent:

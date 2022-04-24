@@ -118,6 +118,11 @@ class RobotMoveEventDelegator():
     def delegate(self, network, event):
         network_message = messages.PlayerRobotMoveMessage(
             event.player_id, event.robot_id, event.new.x, event.new.y)
+
+        # Bolt on the EntityLocation objects for movement
+        network_message.new = event.new
+        network_message.old = event.old
+
         logging.debug("Robot \"%s\":\"%s\" moved: %s -> %s"
                       % (
                           event.player_id,

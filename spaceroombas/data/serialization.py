@@ -117,7 +117,9 @@ class RobotMoveMessageEncoder(JSONEncoder):
             "player_id": obj.player_id,
             "robot_id": obj.robot_id,
             "x": obj.x,
-            "y": obj.y
+            "y": obj.y,
+            "old_location": obj.old,
+            "new_location": obj.new
         }
 
 
@@ -126,7 +128,7 @@ class RobotErrorMessageEncoder(JSONEncoder):
         return {
             "player_id": obj.player_id,
             "robot_id": obj.robot_id,
-            "error": obj.error
+            "error": str(obj.error)
         }
 
 
