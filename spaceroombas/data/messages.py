@@ -59,11 +59,12 @@ class PlayerRobotMoveMessage:
 
 class PlayerRobotMineMessage:
 
-    def __init__(self, player_id, robot_id, x, y):
+    def __init__(self, player_id, robot_id, x, y, sector_id):
         self.player_id = player_id
         self.robot_id = robot_id
         self.mined_x = x
         self.mined_y = y
+        self.sector_id = sector_id
 
 
 class PlayerRobotErrorMessage:
