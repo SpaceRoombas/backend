@@ -1,7 +1,7 @@
 from .state import MapSector, PlayerRobot, EntityLocation
 from . import messages
 from .messages import CarrierPigeon, Handshake, PlayerDetails, PlayerFirmwareChange, PlayerRobotMoveMessage, \
-    PlayerRobotErrorMessage
+    PlayerRobotErrorMessage, PlayerRobotMineMessage, ScoreUpdateMessage
 
 from json import JSONEncoder, dumps as json_string, loads as load_json
 import logging
@@ -123,6 +123,25 @@ class RobotMoveMessageEncoder(JSONEncoder):
         }
 
 
+class RobotMineMessageEncoder(JSONEncoder):
+    def default(self, obj):
+        return {
+            "player_id": obj.player_id,
+            "robot_id": obj.robot_id,
+            "mined_x": obj.mined_x,
+            "mined_y": obj.mined_y
+        }
+
+
+class ScoreUpdateMessageEncoder(JSONEncoder):
+    def default(self, obj):
+        return {
+            "player_id": obj.player_id,
+            "robot_id": obj.robot_id,
+            "score": obj.score
+        }
+
+
 class RobotErrorMessageEncoder(JSONEncoder):
     def default(self, obj):
         return {
@@ -212,10 +231,12 @@ obj_encoders = {
     PlayerFirmwareChange: PlayerFirmwareChangeEncoder,
     PlayerRobotMoveMessage: RobotMoveMessageEncoder,
     PlayerRobotErrorMessage: RobotErrorMessageEncoder,
+    PlayerRobotMineMessage: RobotMineMessageEncoder,
+    ScoreUpdateMessage: ScoreUpdateMessageEncoder,
     messages.RobotListingMessage: RobotListingEncoder,
     PlayerRobot: PlayerRobotEncoder,
     EntityLocation: EntityLocationEncoder,
-    messages.MapSectorListing: MapSectorListingEncoder
+    messages.MapSectorListing: MapSectorListingEncoder,
 }
 
 
