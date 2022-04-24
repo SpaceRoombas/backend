@@ -117,7 +117,9 @@ class RobotMoveMessageEncoder(JSONEncoder):
             "player_id": obj.player_id,
             "robot_id": obj.robot_id,
             "x": obj.x,
-            "y": obj.y
+            "y": obj.y,
+            "old_location": obj.old,
+            "new_location": obj.new
         }
 
 
@@ -126,7 +128,7 @@ class RobotErrorMessageEncoder(JSONEncoder):
         return {
             "player_id": obj.player_id,
             "robot_id": obj.robot_id,
-            "error": obj.error
+            "error": str(obj.error)
         }
 
 
@@ -154,6 +156,13 @@ class PlayerRobotEncoder(JSONEncoder):
             "robot_id": obj.robot_id,
             "location": obj.location,
             "firmware": obj.firmware,
+        }
+
+
+class MapSectorListingEncoder(JSONEncoder):
+    def default(self, obj: messages.MapSectorListing):
+        return {
+            "map_sectors": obj.map_sectors
         }
 
 
@@ -206,6 +215,7 @@ obj_encoders = {
     messages.RobotListingMessage: RobotListingEncoder,
     PlayerRobot: PlayerRobotEncoder,
     EntityLocation: EntityLocationEncoder,
+    messages.MapSectorListing: MapSectorListingEncoder
 }
 
 

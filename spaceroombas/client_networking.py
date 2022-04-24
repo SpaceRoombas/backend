@@ -11,15 +11,17 @@ from data import serialization
 from data.messages import NewConnectionMessage
 
 QUEUE_TIMEOUT = 0.3
-QUEUE_FLUSH_RATE = 1 
+QUEUE_FLUSH_RATE = 200
 
 immediates = [
     'invalid',
     'handshake'
 ]
 
+
 def is_immediate(carrier):
     return carrier.type in immediates
+
 
 class ClientMessageWrapper():
 
@@ -27,11 +29,12 @@ class ClientMessageWrapper():
         self.client = clientid
         self.message = message
 
+
 class SessionClient():
     def __init__(self, id, handler) -> None:
         self.recieve_queue = Queue()
         self.send_queue = Queue()
-        self.id = id # this may be the screen name, or a hash of the screen name
+        self.id = id  # this may be the screen name, or a hash of the screen name
         self.username = id
         self.handler = handler
 
@@ -44,8 +47,8 @@ class SessionClient():
                 msg = self.send_queue.get(True, QUEUE_TIMEOUT)
                 encoded = bytes(msg, 'utf-8')
                 self.handler.send_data(encoded)
-        except Empty: 
-            pass # send queue empty
+        except Empty:
+            pass  # send queue empty
 
     def tick_send_message(self):
         try:
@@ -53,7 +56,8 @@ class SessionClient():
             encoded = bytes(msg, 'utf-8')
             self.handler.send_data(encoded)
         except Empty:
-            pass # send queue empty
+            pass  # send queue empty
+
 
 class SessionHandler(protocol.Protocol):
     def __init__(self, factory) -> None:
@@ -65,14 +69,16 @@ class SessionHandler(protocol.Protocol):
         # Data is sent and recieved as [buffersz + buffer]
         # buffersz is a 4 byte integer
         data_array = bytearray(data)
-        buffersz = int.from_bytes(data_array[:4], byteorder='big') # First four bytes
-        buffer = data_array[4:] # Remainder
+        buffersz = int.from_bytes(
+            data_array[:4], byteorder='big')  # First four bytes
+        buffer = data_array[4:]  # Remainder
         bufflen = len(buffer)
 
         if bufflen == buffersz:
             self.dispatch_carrier_deserialize(buffer)
         else:
-            logging.error("Packet head size mismatch: Told '%d' bytes, got '%d" % (buffersz, bufflen))
+            logging.error(
+                "Packet head size mismatch: Told '%d' bytes, got '%d" % (buffersz, bufflen))
             return
 
     def session_queue(self):
@@ -109,10 +115,12 @@ class SessionHandler(protocol.Protocol):
             self.__factory.session_clients[self.__session_id].handler = self
 
         # TODO verify handshake
-        self.send_handshake_response(self.__session_id, message.signature, Handshake.STATUS_OK)
+        self.send_handshake_response(
+            self.__session_id, message.signature, Handshake.STATUS_OK)
 
         # Let game state know that a player is joined into the game
-        self.session_queue().put(ClientMessageWrapper(self.__session_id, NewConnectionMessage(self.__session_id)), False)
+        self.session_queue().put(ClientMessageWrapper(self.__session_id,
+                                                      NewConnectionMessage(self.__session_id)), False)
 
     def send_handshake_response(self, username, signature, status):
         hnd = Handshake(username, signature, status)
@@ -131,14 +139,17 @@ class SessionHandler(protocol.Protocol):
             # do stuff, return. For now, handle a handshake!
             if carrier.type == 'handshake':
                 self.handle_handshake(carrier.payload)
-            return # immediate messages are not enqueued
+            return  # immediate messages are not enqueued
 
         # Unpack message and enque
         try:
-            message_wrapper = ClientMessageWrapper(self.__session_id, carrier.payload)
+            message_wrapper = ClientMessageWrapper(
+                self.__session_id, carrier.payload)
             self.session_queue().put(message_wrapper, True, QUEUE_TIMEOUT)
         except KeyError:
-            logging.warning("Session is not ready to accept messages (must complete handshake)")
+            logging.warning(
+                "Session is not ready to accept messages (must complete handshake)")
+
 
 class SessionHandlerFactory(protocol.Factory):
 
@@ -155,6 +166,7 @@ class SessionHandlerFactory(protocol.Factory):
     def buildProtocol(self, addr: IAddress):
         return SessionHandler(self)
 
+
 class RoombaNetwork():
 
     def __init__(self, port=9001, update_delta=0.3) -> None:
@@ -170,7 +182,6 @@ class RoombaNetwork():
         for k, v in self.factory.session_clients.items():
             v.tick_flush_send_queue(QUEUE_FLUSH_RATE)
 
-
     def fetch_messages(self):
         messages = list()
 
@@ -178,16 +189,18 @@ class RoombaNetwork():
             for k, v in self.factory.session_clients.items():
                 queue = v.recieve_queue
                 try:
-                    messages.append(queue.get(True, QUEUE_TIMEOUT))  # Head of each queue is inserted into messages list
+                    # Head of each queue is inserted into messages list
+                    messages.append(queue.get(True, QUEUE_TIMEOUT))
                 except Empty:
-                    continue # Queue is empty, continue on silently
+                    continue  # Queue is empty, continue on silently
         return messages
 
     def enque_message(self, clientid, message):
         try:
             packed_message = serialization.package_for_shipping(message)
         except TypeError:
-            logging.info("Attempted to send message without an associated mapper.. ignoring..")
+            logging.info(
+                "Attempted to send message without an associated mapper.. ignoring..")
             return
 
         self.enque_serialized(clientid, packed_message)
@@ -196,10 +209,11 @@ class RoombaNetwork():
         if self.factory is not None:
 
             if packed_message is None:
-                logging.error("Object couldn't be packaged and something really bad happened")
+                logging.error(
+                    "Object couldn't be packaged and something really bad happened")
                 return
 
-            if clientid is None: # This message gets put into *ALL* clients
+            if clientid is None:  # This message gets put into *ALL* clients
                 for k, v in self.factory.session_clients.items():
                     v.send_queue.put(packed_message, False)
             else:
@@ -220,8 +234,7 @@ class RoombaNetwork():
         send_looper = LoopingCall(self.__dispatch_client_messages)
 
         logging.info("Starting server on %d" % (self.__port))
-        
+
         send_looper.start(self.delta)
         server.listen(self.factory)
         reactor.run()
-

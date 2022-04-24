@@ -53,6 +53,8 @@ class PlayerRobotMoveMessage:
         self.robot_id = robot_id
         self.x = x
         self.y = y
+        self.old = None
+        self.new = None
 
 
 class PlayerRobotErrorMessage:
@@ -68,3 +70,9 @@ class RobotListingMessage:
     def __init__(self, bots=[]) -> None:
         self.num_bots = len(bots)
         self.robots = bots
+
+
+class MapSectorListing:
+
+    def __init__(self, sectors):
+        self.map_sectors = sectors

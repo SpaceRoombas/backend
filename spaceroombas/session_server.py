@@ -9,7 +9,7 @@ from os import environ
 import message_delegators
 
 # Tunables
-GAME_LOOP_DELTA = 0.3
+GAME_LOOP_DELTA = 0.15
 NETWORK_UPDATE_DELTA = 0.1
 
 LOGLEVEL = environ.get('LOGGING', 'WARNING').upper()
@@ -29,7 +29,8 @@ def tick_bots(game_state: GameState):
             bot.tick()
         except LangException as e:
             logging.info(f"Player {bot.owner} code had exception: {e}!")
-            game_state.players[bot.owner].add_state_change_event(RobotErrorEvent(bot.owner, bot.robot_id, e))
+            game_state.players[bot.owner].add_state_change_event(
+                RobotErrorEvent(bot.owner, bot.robot_id, e))
 
 
 def game_loop(game_state: GameState, network):
