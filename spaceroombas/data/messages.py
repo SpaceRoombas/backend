@@ -57,6 +57,15 @@ class PlayerRobotMoveMessage:
         self.new = None
 
 
+class PlayerRobotMineMessage:
+
+    def __init__(self, player_id, robot_id, x, y):
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.mined_x = x
+        self.mined_y = y
+
+
 class PlayerRobotErrorMessage:
 
     def __init__(self, player_id, robot_id, error):
@@ -70,6 +79,14 @@ class RobotListingMessage:
     def __init__(self, bots=[]) -> None:
         self.num_bots = len(bots)
         self.robots = bots
+
+
+class ScoreUpdateMessage:
+
+    def __init__(self, player_id, robot_id, score):
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.score = score
 
 
 class MapSectorListing:

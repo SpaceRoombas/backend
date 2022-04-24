@@ -25,12 +25,28 @@ class RobotMoveEvent:
         self.entity_location = None
 
 
+class RobotMineEvent:
+
+    def __init__(self, player_id, robot_id, x, y):
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.mined_x = x
+        self.mined_y = y
+
+
 class RobotErrorEvent:
 
     def __init__(self, player_id, robot_id, error) -> None:
         self.player_id = player_id
         self.robot_id = robot_id
         self.error = error
+
+
+class ScoreUpdateEvent:
+    def __init__(self, player_id, robot_id, score) -> None:
+        self.player_id = player_id
+        self.robot_id = robot_id
+        self.score = score
 
 
 class MapSector:
@@ -271,6 +287,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
         if self.resources >= 4:
             self.resources -= 4
             state.players[self.owner].score += 1
+            state.players[self.owner].add_state_change_event(
+                ScoreUpdateEvent(self.owner, self.robot_id, state.players[self.owner].score))
 
     def mine(self, state, direction):
         """mines a resource in the direction specified, 0=N 1=E 2=S 3=W"""
@@ -289,6 +307,8 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
         if state.map.mine_tile(mine_pos):
             self.resources += 1
+            state.players[self.owner].add_state_change_event(
+                RobotMineEvent(self.owner, self.robot_id, mine_pos.x, mine_pos.y))
 
     def look(self, state, direction):
         """returns id of tile type, -2 if map edge, or -1 if robot"""
@@ -333,8 +353,7 @@ class PlayerRobot:  # TODO make player robot inherit from a general game object
 
         if state.map.check_tile_available(new_pos) and self.resources >= 1:
             self.resources -= 1
-            state.players[self.owner].add_robot(
-                self.owner, new_pos).set_firmware(self.firmware)
+            state.add_robot(self.owner, new_pos).set_firmware(self.firmware)
 
 
 class PlayerState:
@@ -434,13 +453,13 @@ class GameState:
         robot = None
         if self.players.get(player_id) is None:
             logging.warning("invalid player id to add robot to")
-            return False
+            return None
         else:
             robot = self.players[player_id].add_robot(location)
             self.__bind_robot_functions(robot)
             self.map.update_walkable(location, False)
             self.NEW_ROBOT_FLAG = True
-            return True
+            return robot
 
     def __bind_robot_functions(self, robot: PlayerRobot):
         fns = create_interpreter_function_bindings(self, robot)

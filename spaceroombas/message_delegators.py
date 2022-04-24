@@ -1,6 +1,7 @@
 from typing import List
 from data import messages
-from data.state import GameState, MapState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent
+from data.state import GameState, MapState, PlayerExistsError, RobotMoveEvent, RobotErrorEvent, ScoreUpdateEvent, \
+    RobotMineEvent
 from data.util import debounce
 import logging
 
@@ -136,11 +137,27 @@ class RobotMoveEventDelegator():
         network.enque_message(None, network_message)
 
 
+class RobotMineEventDelegator():
+    def delegate(self, network, event):
+        network_message = messages.PlayerRobotMineMessage(
+            event.player_id, event.robot_id, event.mined_x, event.mined_y)
+
+        logging.debug("Robot \"%s\":\"%s\" mined: %s, %s"
+                      % (
+                          event.player_id,
+                          event.robot_id,
+                          event.mined_x,
+                          event.mined_y
+                      ))
+
+        network.enque_message(None, network_message)
+
+
 class RobotErrorEventDelegator():
     def delegate(self, network, event):
         network_message = messages.PlayerRobotErrorMessage(
             event.player_id, event.robot_id, event.error)
-        logging.debug("Robot \"%s\":\"%s\" Errror: %s"
+        logging.debug("Robot \"%s\":\"%s\" Error: %s"
                       % (
                           event.player_id,
                           event.robot_id,
@@ -150,9 +167,25 @@ class RobotErrorEventDelegator():
         network.enque_message(event.player_id, network_message)
 
 
+class ScoreUpdateEventDelegator():
+    def delegate(self, network, event):
+        network_message = messages.ScoreUpdateMessage(
+            event.player_id, event.robot_id, event.score)
+        logging.debug("Robot \"%s\":\"%s\" Score: %s"
+                      % (
+                          event.player_id,
+                          event.robot_id,
+                          event.score
+                      ))
+
+        network.enque_message(event.player_id, network_message)
+
+
 event_delegators = {
     RobotMoveEvent: RobotMoveEventDelegator(),
     RobotErrorEvent: RobotErrorEventDelegator(),
+    RobotMineEvent: RobotMineEventDelegator(),
+    ScoreUpdateEvent: ScoreUpdateEventDelegator()
 }
 
 
