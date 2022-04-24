@@ -218,7 +218,7 @@ class MapState:
     def mine_tile(self, location: EntityLocation):
         if self.check_tile_mineable(location):
             current_sector = self.get_sector(location.sector.sector_id)
-            current_sector.land_map[location.x][location.y][1] = 0
+            current_sector.land_map[location.x][location.y][0] = 0
             current_sector.land_map[location.x][location.y][1] = True
             return True
         return False
