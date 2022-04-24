@@ -32,6 +32,7 @@ class NewConnectionDelegator(MessageDelegator):
 
         message = messageWrapper.message
         robots = None
+        map_sectors = None
 
         try:
             game_state.add_player(message.client_id)
@@ -45,9 +46,10 @@ class NewConnectionDelegator(MessageDelegator):
                 network.enque_message(messageWrapper.client,
                                       messages.RobotListingMessage(robots))
 
-        # Send a map
-        map_sector = game_state.map.get_sector('0,0')
-        network.enque_message(messageWrapper.client, map_sector)
+        # Send all map sectors
+        map_sectors = list(game_state.map.get_sectors())
+        network.enque_message(messageWrapper.client,
+                              messages.MapSectorListing(map_sectors))
 
 
 class PlayerFirmwareChangeDelegator(MessageDelegator):
