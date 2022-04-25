@@ -49,3 +49,17 @@ Set the `LOGLEVEL` environment variable to `INFO` or `DEBUG` for additional logg
 ```
 LOGLEVEL=DEBUG python spaceroombas/session_server.py
 ```
+
+# Setup with Docker
+
+Build image
+
+```
+docker build -t roombots-server .
+```
+
+Run image:
+
+```
+docker run --network host -p 9000-9100:9000-9100 -d spaceroombas-server
+```
