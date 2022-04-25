@@ -61,5 +61,5 @@ docker build -t roombots-server .
 Run image:
 
 ```
-docker run --network host -p 9000-9100:9000-9100 -d spaceroombas-server
+docker run --network host -p 9000-9100:9000-9100 -d roombots-server
 ```
